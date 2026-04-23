@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// Chat-style preview: avatar, name, message snippet, time.
+/// Airy journal-style message preview: cream bg, serif name, terracotta avatar.
 class MessageCard extends StatelessWidget {
   const MessageCard({
     super.key,
     this.sender = 'Ada Lovelace',
-    this.preview = "Hey — want to grab lunch? I'll be free at 12:30.",
-    this.timeAgo = '2m',
+    this.preview = "Would love to grab lunch — are you around Thursday?",
+    this.timeAgo = 'just now',
   });
 
   final String sender;
@@ -20,84 +20,104 @@ class MessageCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0F2027), Color(0xFF2C5364)],
+          colors: [Color(0xFFFBF5E8), Color(0xFFEFE2C8)],
         ),
       ),
-      padding: const EdgeInsets.all(20),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
+      child: Stack(
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF4AE3B5), Color(0xFF5DB4FF)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              sender.characters.first.toUpperCase(),
-              style: const TextStyle(
-                color: Color(0xFF001F16),
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
+          Positioned(
+            right: -18,
+            bottom: -18,
+            child: Transform.rotate(
+              angle: 0.3,
+              child: Icon(
+                Icons.local_cafe_rounded,
+                size: 110,
+                color: const Color(0xFF8B5A3C).withValues(alpha: 0.08),
               ),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        sender,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
+          Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFC66A4A), Color(0xFF8B3A2E)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color:
+                          const Color(0xFF8B3A2E).withValues(alpha: 0.25),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
                     ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  sender.characters.first.toUpperCase(),
+                  style: const TextStyle(
+                    fontFamily: 'Georgia',
+                    color: Color(0xFFFBF5E8),
+                    fontSize: 26,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            sender,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Georgia',
+                              color: Color(0xFF2B2019),
+                              fontSize: 19,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          timeAgo,
+                          style: const TextStyle(
+                            color: Color(0xFFA89479),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     Text(
-                      timeAgo,
+                      preview,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF5E4A37),
+                        fontSize: 13.5,
+                        height: 1.45,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  preview,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13.5,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
