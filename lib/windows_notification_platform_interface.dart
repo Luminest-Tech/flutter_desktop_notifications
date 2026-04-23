@@ -1,11 +1,9 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:windows_notification/notification_message.dart';
-import 'package:windows_notification/windows_notification.dart';
 
+import 'notification_message.dart';
 import 'windows_notification_method_channel.dart';
 
 abstract class WindowsNotificationPlatform extends PlatformInterface {
-  /// Constructs a WindowsNotificationPlatform.
   WindowsNotificationPlatform() : super(token: _token);
 
   static final Object _token = Object();
@@ -13,50 +11,38 @@ abstract class WindowsNotificationPlatform extends PlatformInterface {
   static WindowsNotificationPlatform _instance =
       MethodChannelWindowsNotification();
 
-  /// The default instance of [WindowsNotificationPlatform] to use.
-  ///
-  /// Defaults to [MethodChannelWindowsNotification].
   static WindowsNotificationPlatform get instance => _instance;
 
-  /// Platform-specific implementations should set this with their own
-  /// platform-specific class that extends [WindowsNotificationPlatform] when
-  /// they register themselves.0
-  static set instance(WindowsNotificationPlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
-    _instance = instance;
+  static set instance(WindowsNotificationPlatform value) {
+    PlatformInterface.verifyToken(value, _token);
+    _instance = value;
   }
 
-  Future<void> showNotification(
-      final NotificationMessage notification, final String? applicationId) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<void> init() =>
+      throw UnimplementedError('init() has not been implemented.');
 
-  Future<void> showNotificationCustomTemplate(
-      final NotificationMessage notification,
-      final String? applicationId,
-      final String template) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<void> showPluginTemplate(
+          NotificationMessage message, String? applicationId) =>
+      throw UnimplementedError(
+          'showPluginTemplate() has not been implemented.');
 
-  Future<void> initNotificationCallBack(OnTapNotification? callback) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<void> showCustomTemplate(
+          NotificationMessage message, String? applicationId, String template) =>
+      throw UnimplementedError(
+          'showCustomTemplate() has not been implemented.');
 
-  Future<void> clearNotificationHistory(final String? applicationId) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<void> setCallback(NotificationCallback? callback) =>
+      throw UnimplementedError('setCallback() has not been implemented.');
+
+  Future<void> clearNotificationHistory(String? applicationId) =>
+      throw UnimplementedError(
+          'clearNotificationHistory() has not been implemented.');
 
   Future<void> removeNotification(
-      final String id, final String group, final String? applicationId) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+          String id, String group, String? applicationId) =>
+      throw UnimplementedError('removeNotification() has not been implemented.');
 
-  Future<void> removeNotificationGroup(
-      final String group, final String? applicationId) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
-
-  Future<void> init() async {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<void> removeNotificationGroup(String group, String? applicationId) =>
+      throw UnimplementedError(
+          'removeNotificationGroup() has not been implemented.');
 }

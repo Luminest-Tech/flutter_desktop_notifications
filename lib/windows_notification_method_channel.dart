@@ -2,122 +2,114 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:windows_notification/notification_message.dart';
-import 'package:windows_notification/windows_notification.dart';
 
+import 'notification_message.dart';
+import 'src/toast_xml.dart';
 import 'windows_notification_platform_interface.dart';
 
-/// An implementation of [WindowsNotificationPlatform] that uses method channels.
+/// Method-channel implementation of [WindowsNotificationPlatform]. All toast
+/// XML is composed on the Dart side and sent to the Windows plugin via a
+/// single `show_toast` method call.
 class MethodChannelWindowsNotification extends WindowsNotificationPlatform {
-  static OnTapNotification? tapCallBack;
-  static Map<String, String> templates = {
-    "show_notification_image": '''
-<?xml version="1.0" encoding="utf-8"?>
-<toast activationType="protocol">
-  <visual>
-    <binding template="ToastGeneric">
-      <text id="1">Test message</text>
-         <text id="2">Test message</text>
-          <image placement="appLogoOverride" hint-crop="circle" id="1"/>
-          <image src='#1#'/>
-    </binding>
-  </visual>
-</toast>
-''',
-    "show_notification": '''
-<?xml version="1.0" encoding="utf-8"?>
-<toast activationType="protocol">
-  <visual>
-    <binding template="ToastGeneric">
-      <text id="1">Test message</text>
-         <text id="2">Test message</text>
-            <image src='#1#'/>
-    </binding>
-  </visual>
-</toast>
-'''
-  };
-
   @visibleForTesting
-  final methodChannel = const MethodChannel('windows_notification');
+  final MethodChannel methodChannel = const MethodChannel('windows_notification');
+
+  NotificationCallback? _callback;
+  bool _handlerAttached = false;
 
   @override
-  Future<void> showNotification(final NotificationMessage notification,
-      final String? applicationId) async {
-    final data = notification.toJson;
-    if (applicationId != null) data["application_id"] = applicationId;
-    String? templateXml = templates[notification.methodNmae]?.trim();
-    if (notification.largeImage != null) {
-      templateXml = templateXml?.replaceFirst("#1#", notification.largeImage!);
-    } else {
-      templateXml = templateXml?.replaceFirst("#1#", '');
-    }
-
-    data["template"] = templateXml;
-    await methodChannel.invokeMethod(notification.methodNmae, data);
+  Future<void> init() async {
+    await methodChannel.invokeMethod('init');
   }
 
   @override
-  Future<void> showNotificationCustomTemplate(
-      final NotificationMessage notification,
-      final String? applicationId,
-      final String template) async {
-    assert(notification.temolateType == TemplateType.custom,
-        "Use NotificationMessage.fromCustomTemplate to create notification object");
-    final data = notification.toJson;
-    if (applicationId != null) data["application_id"] = applicationId;
-    data["template"] = template;
-    await methodChannel.invokeMethod(notification.methodNmae, data);
+  Future<void> showPluginTemplate(
+      NotificationMessage message, String? applicationId) async {
+    assert(message.templateType == TemplateType.plugin,
+        'showPluginTemplate requires a message built with fromPluginTemplate');
+    final xml = buildPluginTemplateXml(message);
+    await _showToast(message, applicationId, xml);
   }
 
   @override
-  Future<void> clearNotificationHistory(final String? applicationId) async {
-    final Map<String, dynamic> data = {};
-    if (applicationId != null) data["application_id"] = applicationId;
-    await methodChannel.invokeMethod("clear_history", data);
+  Future<void> showCustomTemplate(NotificationMessage message,
+      String? applicationId, String template) async {
+    assert(message.templateType == TemplateType.custom,
+        'showCustomTemplate requires a message built with fromCustomTemplate');
+    await _showToast(message, applicationId, template);
+  }
+
+  Future<void> _showToast(NotificationMessage message, String? applicationId,
+      String template) async {
+    final args = <String, dynamic>{
+      'tag': message.id,
+      'template': template,
+      'payload': json.encode(message.toPayloadMap()),
+    };
+    if (message.group != null) args['group'] = message.group;
+    if (message.launch != null) args['launch'] = message.launch;
+    if (applicationId != null) args['application_id'] = applicationId;
+    await methodChannel.invokeMethod('show_toast', args);
+  }
+
+  @override
+  Future<void> clearNotificationHistory(String? applicationId) async {
+    final args = <String, dynamic>{};
+    if (applicationId != null) args['application_id'] = applicationId;
+    await methodChannel.invokeMethod('clear_history', args);
   }
 
   @override
   Future<void> removeNotification(
-      String id, final String group, final String? applicationId) async {
-    final Map<String, dynamic> data = {
-      "tag": id,
-      "group": group,
-    };
-    if (applicationId != null) data["application_id"] = applicationId;
-    await methodChannel.invokeMethod("remove_notification", data);
+      String id, String group, String? applicationId) async {
+    final args = <String, dynamic>{'tag': id, 'group': group};
+    if (applicationId != null) args['application_id'] = applicationId;
+    await methodChannel.invokeMethod('remove_notification', args);
   }
 
   @override
   Future<void> removeNotificationGroup(
-      String group, final String? applicationId) async {
-    final Map<String, dynamic> data = {"group": group};
-    if (applicationId != null) data["application_id"] = applicationId;
-    await methodChannel.invokeMethod("remove_group", data);
+      String group, String? applicationId) async {
+    final args = <String, dynamic>{'group': group};
+    if (applicationId != null) args['application_id'] = applicationId;
+    await methodChannel.invokeMethod('remove_group', args);
   }
 
   @override
-  Future<void> initNotificationCallBack(OnTapNotification? callback) async {
-    tapCallBack = callback;
-    methodChannel.setMethodCallHandler((MethodCall call) async {
-      print("callled ${call.method} ${call.arguments}");
-      final Map<String, dynamic> payload =
-          json.decode(call.arguments["launch"]);
-      final NotificationMessage msg = NotificationMessage.fromJson(payload);
-      EventType type =
-          EventType.values.firstWhere((element) => element.name == call.method);
-      final details = NotificationCallBackDetails(
-          argrument: call.arguments["arguments"],
-          eventType: type,
-          message: msg,
-          userInput:
-              Map<String, dynamic>.from(call.arguments["user_input"] ?? {}));
-      tapCallBack?.call(details);
-    });
+  Future<void> setCallback(NotificationCallback? callback) async {
+    _callback = callback;
+    if (_handlerAttached) return;
+    _handlerAttached = true;
+    methodChannel.setMethodCallHandler(_handleCallbackFromNative);
   }
 
-  @override
-  Future<void> init() async {
-    await methodChannel.invokeMethod("init", {});
+  Future<void> _handleCallbackFromNative(MethodCall call) async {
+    final cb = _callback;
+    if (cb == null) return;
+    final event = _eventFromWireName(call.method);
+    if (event == null) return;
+
+    final args = Map<String, dynamic>.from(call.arguments as Map);
+    final payloadJson = args['payload'] as String? ?? '{}';
+    NotificationMessage message;
+    try {
+      message = NotificationMessage.fromCallbackPayload(payloadJson);
+    } catch (_) {
+      return;
+    }
+
+    cb(NotificationCallbackDetails(
+      event: event,
+      message: message,
+      arguments: args['arguments'] as String?,
+      userInput: Map<String, String>.from(args['user_input'] as Map? ?? {}),
+    ));
+  }
+
+  static NotificationEvent? _eventFromWireName(String wire) {
+    for (final e in NotificationEvent.values) {
+      if (e.name == wire) return e;
+    }
+    return null;
   }
 }

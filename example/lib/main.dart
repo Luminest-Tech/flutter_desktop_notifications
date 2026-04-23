@@ -2,242 +2,166 @@
 
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:windows_notification/notification_message.dart';
-import 'package:windows_notification/windows_notification.dart';
 import 'package:example/templates/alarm_template.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
 import 'package:example/templates/meeting_template.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:windows_notification/windows_notification.dart';
 
 void main() {
-  runApp(const MaterialApp(
-    home: MyApp(),
-    color: Colors.red,
-    themeMode: ThemeMode.light,
-  ));
+  runApp(const MaterialApp(home: ExampleApp()));
 }
 
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+// For unpackaged apps, Windows won't actually show a toast unless the AUMID
+// you pass here is registered somewhere (e.g., a Start Menu shortcut with
+// `System.AppUserModel.ID` set). The PowerShell AUMID below happens to be
+// pre-registered on every Windows 10/11 box, which makes it convenient for
+// quick demos only — don't ship this.
+const _aumid = r'{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe';
+
+class ExampleApp extends StatefulWidget {
+  const ExampleApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<ExampleApp> createState() => _ExampleAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  Future<String> getImageBytes(String url) async {
-    final supportDir = await getApplicationSupportDirectory();
-    final cl = http.Client();
-    final resp = await cl.get(Uri.parse(url));
-    final bytes = resp.bodyBytes;
-    final imageFile =
-        File("${supportDir.path}/${DateTime.now().millisecond}.png");
-    await imageFile.create();
-    await imageFile.writeAsBytes(bytes);
-    return imageFile.path;
-  }
-
-  void showWithLargeImage() async {
-    const String url =
-        "https://user-images.githubusercontent.com/56779182/205485419-4303fdca-9f96-48e8-b6af-6f0df2ce8419.png";
-
-    final imageDir = await getImageBytes(url);
-
-    NotificationMessage message = NotificationMessage.fromPluginTemplate(
-      "moon",
-      "fly to the moon",
-      "we are ready!",
-      largeImage: imageDir,
-      launch: "https://en.wikipedia.org/wiki/Japanese_language",
-    );
-    _winNotifyPlugin.showNotificationPluginTemplate(message);
-  }
-
-  void showWithSmallImage() async {
-    const String url =
-        "https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2@1.5x.png";
-
-    final imageDir = await getImageBytes(url);
-
-    NotificationMessage message = NotificationMessage.fromPluginTemplate(
-        "Japanese language", "Japanese language", "how to read",
-        image: imageDir,
-        launch: "https://en.wikipedia.org/wiki/Japanese_language");
-    _winNotifyPlugin.showNotificationPluginTemplate(message);
-  }
-
-  void showWithLargeAndSmalImage() async {
-    const String url =
-        "https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2@1.5x.png";
-
-    final imageDir = await getImageBytes(url);
-
-    NotificationMessage message = NotificationMessage.fromPluginTemplate(
-        "Japanese language", "Japanese language", "how to read",
-        image: imageDir,
-        launch: "https://en.wikipedia.org/wiki/Japanese_language",
-        largeImage: imageDir);
-    _winNotifyPlugin.showNotificationPluginTemplate(message);
-  }
-
-  void showAlarm() {
-    NotificationMessage message =
-        NotificationMessage.fromCustomTemplate("test1", group: "jj");
-    _winNotifyPlugin.showNotificationCustomTemplate(message, alarmtTemplate);
-  }
-
-  void showMeetingTemplate() {
-    NotificationMessage message =
-        NotificationMessage.fromCustomTemplate("test1", group: "jj");
-    _winNotifyPlugin.showNotificationCustomTemplate(message, meetingTemplate);
-  }
-
-  final _winNotifyPlugin = WindowsNotification(
-      applicationId:
-          r"{D65231B0-B2F1-4857-A4CE-A8E7C6EA7D27}\WindowsPowerShell\v1.0\powershell.exe");
+class _ExampleAppState extends State<ExampleApp> {
+  final _notifier = WindowsNotification(applicationId: _aumid);
+  String _lastEvent = '';
 
   @override
   void initState() {
-    _winNotifyPlugin.initNotificationCallBack((s) {
-      print(s.argrument);
-      print(s.userInput);
-      print(s.eventType);
-    });
     super.initState();
+    _notifier.setCallback((details) {
+      setState(() {
+        _lastEvent = 'event=${details.event.name} '
+            'args=${details.arguments} '
+            'input=${details.userInput} '
+            'id=${details.message.id}';
+      });
+      print(_lastEvent);
+    });
   }
 
-  void sendWithPluginTemplate() {
-    NotificationMessage message = NotificationMessage.fromPluginTemplate(
-        "test1", "TEXT", "TEXT",
-        image: r"C:\in_work\mrt_logo\large.png",
-        payload: {"action": "open_center"});
-    _winNotifyPlugin.showNotificationPluginTemplate(message);
+  Future<String> _downloadTo(String url, String fileName) async {
+    final dir = await getApplicationSupportDirectory();
+    final file = File('${dir.path}/$fileName');
+    final resp = await http.get(Uri.parse(url));
+    await file.writeAsBytes(resp.bodyBytes);
+    return file.path;
   }
 
-  void sendMyOwnTemplate() {
-    /// image tag src must be set
-    /// for actions make sure your argruments contains `:` like "action:open_center"
-    const String template = '''
-<?xml version="1.0" encoding="utf-8"?>
-  <toast launch='conversationId=9813' activationType="background">
-    <visual>
-        <binding template='ToastGeneric'>
-            <text>Some text</text>
-        </binding>
-    </visual>
-    <actions>
-        <action content='Archive'  arguments='action:archive'/>
-    </actions>
-</toast>
-''';
+  Future<void> _simpleToast() async {
+    await _notifier.showNotificationPluginTemplate(
+      NotificationMessage.fromPluginTemplate(
+        'simple',
+        'Hello',
+        'Body text goes here.',
+        payload: const {'action': 'open_home'},
+      ),
+    );
+  }
 
-    NotificationMessage message =
-        NotificationMessage.fromCustomTemplate("test1", group: "jj");
-    _winNotifyPlugin.showNotificationCustomTemplate(message, template);
+  Future<void> _replyToast() async {
+    await _notifier.showNotificationPluginTemplate(
+      NotificationMessage.fromPluginTemplate(
+        'reply',
+        'New message from Ada',
+        'Want to grab lunch?',
+        inputs: const [
+          NotificationInput.text(id: 'reply', placeholder: 'Quick reply…'),
+        ],
+        actions: const [
+          NotificationAction(
+            content: 'Reply',
+            arguments: 'action:reply',
+            inputId: 'reply',
+          ),
+          NotificationAction(
+            content: 'Dismiss',
+            arguments: 'action:dismiss',
+            buttonStyle: NotificationButtonStyle.critical,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _imageToast() async {
+    final path = await _downloadTo(
+      'https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2@1.5x.png',
+      'wiki.png',
+    );
+    await _notifier.showNotificationPluginTemplate(
+      NotificationMessage.fromPluginTemplate(
+        'wiki',
+        'Wikipedia',
+        'Tap to open the article.',
+        image: path,
+        launch: 'https://en.wikipedia.org/wiki/Toast_(computing)',
+      ),
+    );
+  }
+
+  Future<void> _customAlarm() async {
+    await _notifier.showNotificationCustomTemplate(
+      NotificationMessage.fromCustomTemplate('alarm', group: 'demos'),
+      alarmTemplate,
+    );
+  }
+
+  Future<void> _customMeeting() async {
+    await _notifier.showNotificationCustomTemplate(
+      NotificationMessage.fromCustomTemplate('meeting', group: 'demos'),
+      meetingTemplate,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
-        body: SizedBox(
-            width: MediaQuery.of(context).size.width,
-            child: CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.all(25),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                            onPressed: () {
-                              sendMyOwnTemplate();
-                            },
-                            child: const Text(
-                                "Send simple notification with custom template and simple action")),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        ElevatedButton(
-                            onPressed: () {
-                              sendWithPluginTemplate();
-                            },
-                            child: const Text(
-                                "Send Simple notification with title body and small image")),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        ElevatedButton(
-                            onPressed: () {
-                              _winNotifyPlugin.clearNotificationHistory();
-                            },
-                            child:
-                                const Text("Clear action center notification")),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        ElevatedButton(
-                            onPressed: () {
-                              _winNotifyPlugin.removeNotificationGroup("jj");
-                            },
-                            child: const Text("Clear group notification")),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        ElevatedButton(
-                            onPressed: () {
-                              _winNotifyPlugin.removeNotificationId(
-                                  "test1", "jj");
-                            },
-                            child: const Text("Remove single notification")),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                            onPressed: () {
-                              showAlarm();
-                            },
-                            child: const Text(
-                                "show alarm with custom temolate userInputs and action")),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                            onPressed: () {
-                              showWithLargeImage();
-                            },
-                            child: const Text(
-                                "show with large image and lunch uri")),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                            onPressed: () {
-                              showWithSmallImage();
-                            },
-                            child: const Text(
-                                "show with small image and lunch uri")),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                            onPressed: () {
-                              showWithLargeAndSmalImage();
-                            },
-                            child: const Text(
-                                "show with large and small image and lunch uri")),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                            onPressed: () {
-                              showMeetingTemplate();
-                            },
-                            child: const Text(
-                                "meeting temolate with action and inputs")),
-                      ],
-                    ),
-                  ),
-                )
-              ],
-            )),
+    return Scaffold(
+      appBar: AppBar(title: const Text('windows_notification example')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _button('Simple toast', _simpleToast),
+          _button('Toast with reply input + action buttons', _replyToast),
+          _button('Toast with image + launch URL', _imageToast),
+          _button('Custom XML: alarm', _customAlarm),
+          _button('Custom XML: meeting', _customMeeting),
+          const Divider(),
+          _button('Clear notification history', _notifier.clearNotificationHistory),
+          _button('Remove group "demos"',
+              () => _notifier.removeNotificationGroup('demos')),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              _lastEvent.isEmpty ? 'No events yet' : _lastEvent,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _button(String label, Future<void> Function() onPressed) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: ElevatedButton(
+          onPressed: () async {
+            try {
+              await onPressed();
+            } catch (e) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Error: $e'),
+              ));
+            }
+          },
+          child: Text(label),
+        ),
+      );
 }

@@ -1,384 +1,283 @@
 #include "windows_notification_plugin.h"
 
-namespace windows_notification
-{
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-  // static
-  void WindowsNotificationPlugin::RegisterWithRegistrar(
-      flutter::PluginRegistrarWindows *registrar)
-  {
-    auto channel =
-        std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-            registrar->messenger(), "windows_notification",
-            &flutter::StandardMethodCodec::GetInstance());
-    auto *channel_pointer = channel.get();
-    auto plugin = std::make_unique<WindowsNotificationPlugin>(std::move(registrar));
+namespace windows_notification {
 
-    channel_pointer->SetMethodCallHandler(
-        [plugin_pointer = plugin.get()](const auto &call, auto result)
-        {
-          plugin_pointer->HandleMethodCall(call, std::move(result));
-        });
+using winrt::Windows::Data::Xml::Dom::XmlDocument;
+using winrt::Windows::Foundation::IInspectable;
+using winrt::Windows::Foundation::IStringable;
+using winrt::Windows::UI::Notifications::ToastActivatedEventArgs;
+using winrt::Windows::UI::Notifications::ToastDismissalReason;
+using winrt::Windows::UI::Notifications::ToastDismissedEventArgs;
+using winrt::Windows::UI::Notifications::ToastNotification;
+using winrt::Windows::UI::Notifications::ToastNotifier;
 
-    registrar->AddPlugin(std::move(plugin));
-  }
+using flutter::EncodableMap;
+using flutter::EncodableValue;
 
-  	WindowsNotificationPlugin::WindowsNotificationPlugin(flutter::PluginRegistrarWindows* registrar) : registrar(registrar) {
-		channel_ =
-			std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(registrar->messenger(),
-				"windows_notification",
-				&flutter::StandardMethodCodec::GetInstance());
+namespace {
 
-		proc_id = registrar->RegisterTopLevelWindowProcDelegate(
-			[this](HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-				return WProc(hWnd, message, wParam, lParam);
-			});
-    codec_ = &flutter::StandardMethodCodec::GetInstance();
-      
-	}
-  WindowsNotificationPlugin::~WindowsNotificationPlugin()
-  {
-  }
-
-  HWND WindowsNotificationPlugin::GetWindow() {
-		return current_window;
-	}
-
-  void WindowsNotificationPlugin::HandleMethodCall(
-      const flutter::MethodCall<flutter::EncodableValue> &method_call,
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
-  {
-    const std::string methodName = method_call.method_name();
-    try
-    {
-    if (methodName.compare("init") == 0){
-    init();
-    result->Success(true);
-    }else if (methodName.compare("show_notification_image") == 0)
-      {
-        auto args = std::get<flutter::EncodableMap>(*method_call.arguments());
-        std::string const title = std::get<std::string>(args[flutter::EncodableValue("title")]);
-        std::string const tag = std::get<std::string>(args[flutter::EncodableValue("tag")]);
-        std::string const body = std::get<std::string>(args[flutter::EncodableValue("body")]);
-        std::string const image = std::get<std::string>(args[flutter::EncodableValue("image")]);
-        std::string const payload = std::get<std::string>(args[flutter::EncodableValue("payload")]);
-        std::string const temp = std::get<std::string>(args[flutter::EncodableValue("template")]);
-        XmlDocument doc = showNotificaationWithImage(title, body, image, temp);
-        doc.DocumentElement().SetAttribute(L"payload", winrt::to_hstring(payload));
-        auto value = isNull(args, "launch");
-        if (value)
-        {
-          std::string const launchData = std::get<std::string>(args[flutter::EncodableValue("launch")]);
-          doc.DocumentElement().SetAttribute(L"launch", winrt::to_hstring(launchData));
-        }
-        ToastNotification notif{doc};
-        
-        notif.Activated({this, &WindowsNotificationPlugin::onActivate});
-        notif.Dismissed({this, &WindowsNotificationPlugin::onDismissed});
-
-        notif.Tag(winrt::to_hstring(tag));
-        auto groupExist = isNull(args, "group");
-        if (groupExist)
-        {
-          std::string const group = std::get<std::string>(args[flutter::EncodableValue("group")]);
-          notif.Group(winrt::to_hstring(group));
-        }
-
-        auto withAppId = isNull(args, "application_id");
-        if (withAppId)
-        {
-          std::string const appId = std::get<std::string>(args[flutter::EncodableValue("application_id")]);
-          ToastNotifier toastNotifier_{toastManager.CreateToastNotifier(winrt::to_hstring(appId))};
-          toastNotifier_.Show(notif);
-        }
-        else
-        {
-          ToastNotifier toastNotifier_{toastManager.CreateToastNotifier()};
-          toastNotifier_.Show(notif);
-        }
-        result->Success(nullptr);
-      }
-      else if (methodName.compare("custom_template") == 0)
-      {
-        auto args = std::get<flutter::EncodableMap>(*method_call.arguments());
-        std::string const tag = std::get<std::string>(args[flutter::EncodableValue("tag")]);
-        std::string const payload = std::get<std::string>(args[flutter::EncodableValue("payload")]);
-        std::string const temp = std::get<std::string>(args[flutter::EncodableValue("template")]);
-        XmlDocument doc = showCustomTemplate(temp);
-        doc.DocumentElement().SetAttribute(L"payload", winrt::to_hstring(payload));
-        auto value = isNull(args, "launch");
-        if (value)
-        {
-          std::string const launchData = std::get<std::string>(args[flutter::EncodableValue("launch")]);
-          doc.DocumentElement().SetAttribute(L"launch", winrt::to_hstring(launchData));
-        }
-        ToastNotification notif{doc};
-
-        notif.Tag(winrt::to_hstring(tag));
-        auto groupExist = isNull(args, "group");
-        if (groupExist)
-        {
-          std::string const group = std::get<std::string>(args[flutter::EncodableValue("group")]);
-          notif.Group(winrt::to_hstring(group));
-        }
-        auto withAppId = isNull(args, "application_id");
-        if (withAppId)
-        {
-          std::string const appId = std::get<std::string>(args[flutter::EncodableValue("application_id")]);
-          ToastNotifier toastNotifier_{toastManager.CreateToastNotifier(winrt::to_hstring(appId))};
-          toastNotifier_.Show(notif);
-        }
-        else
-        {
-          ToastNotifier toastNotifier_{toastManager.CreateToastNotifier()};
-          toastNotifier_.Show(notif);
-        }
-        notif.Activated({this, &WindowsNotificationPlugin::onActivate});
-        notif.Dismissed({this, &WindowsNotificationPlugin::onDismissed});
-        // test(t);
-        result->Success(nullptr);
-      }
-      else if (methodName.compare("show_notification") == 0)
-      {
-        auto args = std::get<flutter::EncodableMap>(*method_call.arguments());
-        std::string const title = std::get<std::string>(args[flutter::EncodableValue("title")]);
-        std::string const tag = std::get<std::string>(args[flutter::EncodableValue("tag")]);
-        std::string const body = std::get<std::string>(args[flutter::EncodableValue("body")]);
-        std::string const payload = std::get<std::string>(args[flutter::EncodableValue("payload")]);
-        std::string const temp = std::get<std::string>(args[flutter::EncodableValue("template")]);
-        XmlDocument doc = showNotificaationWithoutImage(title, body, temp);
-        doc.DocumentElement().SetAttribute(L"payload", winrt::to_hstring(payload));
-        auto value = isNull(args, "launch");
-        if (value)
-        {
-          std::string const launchData = std::get<std::string>(args[flutter::EncodableValue("launch")]);
-          doc.DocumentElement().SetAttribute(L"launch", winrt::to_hstring(launchData));
-        }
-        ToastNotification notif{doc};
-        notif.Activated({this, &WindowsNotificationPlugin::onActivate});
-        notif.Dismissed({this, &WindowsNotificationPlugin::onDismissed});
-        notif.Tag(winrt::to_hstring(tag));
-        auto groupExist = isNull(args, "group");
-        if (groupExist)
-        {
-          std::string const group = std::get<std::string>(args[flutter::EncodableValue("group")]);
-          notif.Group(winrt::to_hstring(group));
-        }
-        auto withAppId = isNull(args, "application_id");
-        if (withAppId)
-        {
-          std::string const appId = std::get<std::string>(args[flutter::EncodableValue("application_id")]);
-          ToastNotifier toastNotifier_{toastManager.CreateToastNotifier(winrt::to_hstring(appId))};
-          toastNotifier_.Show(notif);
-        }
-        else
-        {
-          ToastNotifier toastNotifier_{toastManager.CreateToastNotifier()};
-          toastNotifier_.Show(notif);
-        }
-
-        // test(t);
-        result->Success(nullptr);
-      }
-      else if (methodName.compare("clear_history") == 0)
-      {
-        auto args = std::get<flutter::EncodableMap>(*method_call.arguments());
-        auto withAppId = isNull(args, "application_id");
-        if (withAppId)
-        {
-          std::string const appId = std::get<std::string>(args[flutter::EncodableValue("application_id")]);
-          clearAllNotification(appId);
-        }
-        else
-        {
-          toastManager.History().Clear();
-        }
-        result->Success(nullptr);
-      }
-      else if (methodName.compare("remove_notification") == 0)
-      {
-        auto args = std::get<flutter::EncodableMap>(*method_call.arguments());
-        std::string const tag = std::get<std::string>(args[flutter::EncodableValue("tag")]);
-        std::string const group = std::get<std::string>(args[flutter::EncodableValue("group")]);
-
-        auto withAppId = isNull(args, "application_id");
-        if (withAppId)
-        {
-          std::string const appId = std::get<std::string>(args[flutter::EncodableValue("application_id")]);
-          removeNotificationTag(tag, group, appId);
-        }
-        else
-        {
-          toastManager.History().Remove(winrt::to_hstring(tag), winrt::to_hstring(group));
-        }
-
-        result->Success(nullptr);
-      }
-      else if (methodName.compare("remove_group") == 0)
-      {
-
-        auto args = std::get<flutter::EncodableMap>(*method_call.arguments());
-        std::string const group = std::get<std::string>(args[flutter::EncodableValue("group")]);
-        auto withAppId = isNull(args, "application_id");
-        if (withAppId)
-        {
-          std::string const appId = std::get<std::string>(args[flutter::EncodableValue("application_id")]);
-          removeNotificationGroup(group, appId);
-        }
-        else
-        {
-          toastManager.History().RemoveGroup(winrt::to_hstring(group));
-        }
-
-        result->Success(nullptr);
-      }
-      else
-      {
-        result->NotImplemented();
-      }
-    }
-    catch (const std::exception &e)
-    {
-      std::cerr << e.what() << '\n';
-      result->Success(nullptr);
-    }
-  }
-
-  XmlDocument WindowsNotificationPlugin::showNotificaationWithImage(std::string const title, std::string const body, std::string const image, std::string const temp)
-  {
-    XmlDocument doc; // ToastNotificationManager::GetTemplateContent(ToastTemplateType::ToastImageAndText02);
-    doc.LoadXml(winrt::to_hstring(temp));
-    doc.SelectSingleNode(L"//text[1]").InnerText(winrt::to_hstring(title));
-    doc.SelectSingleNode(L"//text[2]").InnerText(winrt::to_hstring(body));
-    doc.SelectSingleNode(L"//image[1]").as<XmlElement>().SetAttribute(L"src", winrt::to_hstring(image));
-    return doc;
-  }
-  XmlDocument WindowsNotificationPlugin::showCustomTemplate(std::string const temp)
-  {
-    XmlDocument doc; // ToastNotificationManager::GetTemplateContent(ToastTemplateType::ToastImageAndText02);
-    doc.LoadXml(winrt::to_hstring(temp));
-    return doc;
-  }
-  XmlDocument WindowsNotificationPlugin::showNotificaationWithoutImage(std::string const title, std::string const body, std::string const temp)
-  {
-
-    XmlDocument doc; // ToastNotificationManager::GetTemplateContent(ToastTemplateType::ToastImageAndText02);
-    doc.LoadXml(winrt::to_hstring(temp));
-    doc.SelectSingleNode(L"//text[1]").InnerText(winrt::to_hstring(title));
-
-    doc.SelectSingleNode(L"//text[2]").InnerText(winrt::to_hstring(body));
-    return doc;
-  }
-
-  void WindowsNotificationPlugin::onActivate(Windows::UI::Notifications::ToastNotification const &notification, winrt::Windows::Foundation::IInspectable const &args)
-  {
-
-    XmlDocument const doc = notification.Content();
-    winrt::hstring payload = doc.DocumentElement().GetAttribute(L"payload");
-    ToastActivatedEventArgs ar = args.as<ToastActivatedEventArgs>();
-    Collections::ValueSet userInput = ar.UserInput();
-
-    EncodableMap notificationArgruments;
-    notificationArgruments[EncodableValue("launch")] = EncodableValue(winrt::to_string(payload));
-    notificationArgruments[EncodableValue("arguments")] = EncodableValue(winrt::to_string(ar.Arguments()));
-    EncodableMap userInputArgruments;
-    auto iterable = userInput.GetView();
-    for (auto const& pair : iterable)
-    {
-        winrt::hstring key = pair.Key();
-        IInspectable value = pair.Value();
-        auto keyStr = winrt::to_string(key);
-        auto hstr = value.as<winrt::Windows::Foundation::IStringable>();
-        std::string valueStr = winrt::to_string(hstr.ToString());
-        userInputArgruments[EncodableValue(keyStr)] = EncodableValue(valueStr);
-        
-    }
-    notificationArgruments[EncodableValue("user_input")]=EncodableValue(userInputArgruments);
-    EncodableValue res = EncodableValue(notificationArgruments);
-    sendToMainThread("onActivate",res);
-  }
-  void WindowsNotificationPlugin::onDismissed(Windows::UI::Notifications::ToastNotification const &notification, winrt::Windows::UI::Notifications::ToastDismissedEventArgs const &args)
-  {
-    auto reason = args.Reason();
-    XmlDocument const doc = notification.Content();
-    winrt::hstring payload = doc.DocumentElement().GetAttribute(L"payload");
-    std::string methodName;
-    EncodableValue res = EncodableValue(EncodableMap{
-        {EncodableValue("launch"), EncodableValue(winrt::to_string(payload))},
-    });
-          switch (reason)
-    {
-        case Windows::UI::Notifications::ToastDismissalReason::ApplicationHidden:
-            methodName = "onDismissedApplicationHidden";
-            break;
-        case Windows::UI::Notifications::ToastDismissalReason::UserCanceled:
-            methodName = "onDismissedUserCanceled";
-            break;
-        default:
-            methodName = "onDismissedTimedOut";
-            break;
-    }
-    sendToMainThread(methodName,res);
-  };
-
-  void WindowsNotificationPlugin::clearAllNotification(std::string const appId)
-  {
-    toastManager.History().Clear(winrt::to_hstring(appId));
-  };
-
-  void WindowsNotificationPlugin::removeNotificationTag(std::string const tag, std::string const group, std::string const appId)
-  {
-    toastManager.History().Remove(winrt::to_hstring(tag), winrt::to_hstring(group), winrt::to_hstring(appId));
-    
-  }
-  void WindowsNotificationPlugin::removeNotificationGroup(std::string const group, std::string const appId)
-  {
-    toastManager.History().RemoveGroup(winrt::to_hstring(group), winrt::to_hstring(appId));
-  }
-    void WindowsNotificationPlugin::init()
-  {
-    current_window = ::GetAncestor(registrar->GetView()->GetNativeWindow(), GA_ROOT);
-  }
-  
-  const EncodableValue *WindowsNotificationPlugin::isNull(const EncodableMap &map, const char *key)
-  {
-    auto it = map.find(EncodableValue(key));
-    if (it == map.end())
-    {
-      return nullptr;
-    }
-    return &(it->second);
-  }
-  	std::optional<LRESULT> WindowsNotificationPlugin::WProc(HWND hWnd,
-		UINT message,
-		WPARAM wParam,
-		LPARAM lParam) {
-    if(message == NotificationThreadMessageId){
-        handleBackgroundMessage(lParam);
-    }
-    return std::nullopt;
-    }
-
-void WindowsNotificationPlugin::sendToMainThread(std::string methodName,EncodableValue value){
-    const flutter::MethodCall<flutter::EncodableValue> method_call(methodName,std::make_unique<flutter::EncodableValue>(value));
-    std::unique_ptr<std::vector<uint8_t>> message =
-         codec_->EncodeMethodCall(method_call);
-    std::vector<uint8_t>* rawVector = message.release(); // Release ownership from unique_ptr
-    LPARAM lParam = reinterpret_cast<LPARAM>(rawVector);
-    PostMessage(GetWindow(), NotificationThreadMessageId, 0,lParam);
+// Fetch a required string from `args`, or return `fallback` if the key is
+// missing / not a string. Prevents std::bad_variant_access on unexpected
+// Dart-side shapes.
+std::string GetString(const EncodableMap& args, const char* key,
+                      std::string fallback = "") {
+  auto it = args.find(EncodableValue(key));
+  if (it == args.end()) return fallback;
+  if (const auto* s = std::get_if<std::string>(&it->second)) return *s;
+  return fallback;
 }
-void WindowsNotificationPlugin::handleBackgroundMessage(LPARAM lParam){
-std::vector<uint8_t>* rawVector = reinterpret_cast<std::vector<uint8_t>*>(lParam);
-if(rawVector){
-  std::unique_ptr<std::vector<uint8_t>> msg(rawVector);
-  size_t dataSize = msg->size();
-  const uint8_t* rawData = msg->data();
-  auto decode = codec_->DecodeMethodCall(rawData,dataSize);
-  if(decode){
-  auto args = std::make_unique<flutter::EncodableValue>(*decode->arguments()) ;
-  channel_->InvokeMethod(decode->method_name(), std::make_unique<flutter::EncodableValue>(*args));
+
+std::optional<std::string> GetOptionalString(const EncodableMap& args,
+                                             const char* key) {
+  auto it = args.find(EncodableValue(key));
+  if (it == args.end()) return std::nullopt;
+  if (const auto* s = std::get_if<std::string>(&it->second)) return *s;
+  return std::nullopt;
+}
+
+}  // namespace
+
+// static
+void WindowsNotificationPlugin::RegisterWithRegistrar(
+    flutter::PluginRegistrarWindows* registrar) {
+  auto channel = std::make_unique<flutter::MethodChannel<EncodableValue>>(
+      registrar->messenger(), "windows_notification",
+      &flutter::StandardMethodCodec::GetInstance());
+
+  auto plugin = std::make_unique<WindowsNotificationPlugin>(registrar);
+
+  channel->SetMethodCallHandler(
+      [plugin_pointer = plugin.get()](const auto& call, auto result) {
+        plugin_pointer->HandleMethodCall(call, std::move(result));
+      });
+
+  registrar->AddPlugin(std::move(plugin));
+}
+
+WindowsNotificationPlugin::WindowsNotificationPlugin(
+    flutter::PluginRegistrarWindows* registrar)
+    : registrar_(registrar) {
+  channel_ = std::make_unique<flutter::MethodChannel<EncodableValue>>(
+      registrar->messenger(), "windows_notification",
+      &flutter::StandardMethodCodec::GetInstance());
+  codec_ = &flutter::StandardMethodCodec::GetInstance();
+
+  proc_id_ = registrar->RegisterTopLevelWindowProcDelegate(
+      [this](HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+        return WProc(hwnd, message, wParam, lParam);
+      });
+
+  CacheHostWindow();
+}
+
+WindowsNotificationPlugin::~WindowsNotificationPlugin() {
+  if (proc_id_ != -1 && registrar_) {
+    registrar_->UnregisterTopLevelWindowProcDelegate(proc_id_);
   }
 }
-}
-} // namespace windows_notification
 
+void WindowsNotificationPlugin::CacheHostWindow() {
+  auto* view = registrar_->GetView();
+  if (view == nullptr) return;
+  HWND native = view->GetNativeWindow();
+  if (native == nullptr) return;
+  host_window_ = ::GetAncestor(native, GA_ROOT);
+}
+
+void WindowsNotificationPlugin::HandleMethodCall(
+    const flutter::MethodCall<EncodableValue>& method_call,
+    std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
+  const std::string& name = method_call.method_name();
+  const auto* arg_map = std::get_if<EncodableMap>(method_call.arguments());
+  static const EncodableMap kEmpty;
+  const EncodableMap& args = arg_map ? *arg_map : kEmpty;
+
+  try {
+    if (name == "init") {
+      CacheHostWindow();
+      result->Success();
+    } else if (name == "show_toast") {
+      ShowToast(args);
+      result->Success();
+    } else if (name == "clear_history") {
+      ClearHistory(args);
+      result->Success();
+    } else if (name == "remove_notification") {
+      RemoveNotification(args);
+      result->Success();
+    } else if (name == "remove_group") {
+      RemoveGroup(args);
+      result->Success();
+    } else {
+      result->NotImplemented();
+    }
+  } catch (const winrt::hresult_error& e) {
+    result->Error("winrt_error", winrt::to_string(e.message()));
+  } catch (const std::exception& e) {
+    result->Error("exception", e.what());
+  }
+}
+
+void WindowsNotificationPlugin::ShowToast(const EncodableMap& args) {
+  const std::string tag = GetString(args, "tag");
+  const std::string payload = GetString(args, "payload");
+  const std::string xml = GetString(args, "template");
+
+  XmlDocument doc;
+  doc.LoadXml(winrt::to_hstring(xml));
+  doc.DocumentElement().SetAttribute(L"payload", winrt::to_hstring(payload));
+
+  if (auto launch = GetOptionalString(args, "launch")) {
+    doc.DocumentElement().SetAttribute(L"launch", winrt::to_hstring(*launch));
+  }
+
+  ToastNotification notif{doc};
+  if (!tag.empty()) {
+    notif.Tag(winrt::to_hstring(tag));
+  }
+  if (auto group = GetOptionalString(args, "group")) {
+    notif.Group(winrt::to_hstring(*group));
+  }
+
+  // Event handlers MUST be attached before Show(); otherwise fast
+  // activations/dismissals can fire before we wire up.
+  notif.Activated({this, &WindowsNotificationPlugin::OnActivate});
+  notif.Dismissed({this, &WindowsNotificationPlugin::OnDismissed});
+
+  if (auto app_id = GetOptionalString(args, "application_id")) {
+    toast_manager_.CreateToastNotifier(winrt::to_hstring(*app_id)).Show(notif);
+  } else {
+    toast_manager_.CreateToastNotifier().Show(notif);
+  }
+}
+
+void WindowsNotificationPlugin::ClearHistory(const EncodableMap& args) {
+  if (auto app_id = GetOptionalString(args, "application_id")) {
+    toast_manager_.History().Clear(winrt::to_hstring(*app_id));
+  } else {
+    toast_manager_.History().Clear();
+  }
+}
+
+void WindowsNotificationPlugin::RemoveNotification(const EncodableMap& args) {
+  const std::string tag = GetString(args, "tag");
+  const std::string group = GetString(args, "group");
+  if (auto app_id = GetOptionalString(args, "application_id")) {
+    toast_manager_.History().Remove(winrt::to_hstring(tag),
+                                    winrt::to_hstring(group),
+                                    winrt::to_hstring(*app_id));
+  } else {
+    toast_manager_.History().Remove(winrt::to_hstring(tag),
+                                    winrt::to_hstring(group));
+  }
+}
+
+void WindowsNotificationPlugin::RemoveGroup(const EncodableMap& args) {
+  const std::string group = GetString(args, "group");
+  if (auto app_id = GetOptionalString(args, "application_id")) {
+    toast_manager_.History().RemoveGroup(winrt::to_hstring(group),
+                                         winrt::to_hstring(*app_id));
+  } else {
+    toast_manager_.History().RemoveGroup(winrt::to_hstring(group));
+  }
+}
+
+void WindowsNotificationPlugin::OnActivate(ToastNotification const& sender,
+                                           IInspectable const& args) {
+  XmlDocument const doc = sender.Content();
+  winrt::hstring payload = doc.DocumentElement().GetAttribute(L"payload");
+
+  std::string arguments_str;
+  EncodableMap user_input_map;
+  if (auto activated = args.try_as<ToastActivatedEventArgs>()) {
+    arguments_str = winrt::to_string(activated.Arguments());
+    auto user_input = activated.UserInput();
+    if (user_input) {
+      for (auto const& pair : user_input.GetView()) {
+        auto key = winrt::to_string(pair.Key());
+        std::string value;
+        if (auto stringable = pair.Value().try_as<IStringable>()) {
+          value = winrt::to_string(stringable.ToString());
+        }
+        user_input_map[EncodableValue(std::move(key))] =
+            EncodableValue(std::move(value));
+      }
+    }
+  }
+
+  EncodableMap out;
+  out[EncodableValue("payload")] = EncodableValue(winrt::to_string(payload));
+  out[EncodableValue("arguments")] = EncodableValue(std::move(arguments_str));
+  out[EncodableValue("user_input")] = EncodableValue(std::move(user_input_map));
+  PostEventToMainThread("activated", EncodableValue(std::move(out)));
+}
+
+void WindowsNotificationPlugin::OnDismissed(
+    ToastNotification const& sender,
+    ToastDismissedEventArgs const& args) {
+  XmlDocument const doc = sender.Content();
+  winrt::hstring payload = doc.DocumentElement().GetAttribute(L"payload");
+
+  std::string method_name;
+  switch (args.Reason()) {
+    case ToastDismissalReason::ApplicationHidden:
+      method_name = "dismissedByApp";
+      break;
+    case ToastDismissalReason::UserCanceled:
+      method_name = "dismissedByUser";
+      break;
+    case ToastDismissalReason::TimedOut:
+    default:
+      method_name = "dismissedByTimeout";
+      break;
+  }
+
+  EncodableMap out;
+  out[EncodableValue("payload")] = EncodableValue(winrt::to_string(payload));
+  PostEventToMainThread(std::move(method_name), EncodableValue(std::move(out)));
+}
+
+std::optional<LRESULT> WindowsNotificationPlugin::WProc(HWND hwnd, UINT message,
+                                                        WPARAM wParam,
+                                                        LPARAM lParam) {
+  if (message == kNotificationThreadMessageId) {
+    HandleBackgroundMessage(lParam);
+  }
+  return std::nullopt;
+}
+
+void WindowsNotificationPlugin::PostEventToMainThread(
+    std::string method_name, EncodableValue args) {
+  if (host_window_ == nullptr) {
+    CacheHostWindow();
+    if (host_window_ == nullptr) return;  // nowhere to post; drop the event
+  }
+  const flutter::MethodCall<EncodableValue> call(
+      std::move(method_name), std::make_unique<EncodableValue>(std::move(args)));
+  auto encoded = codec_->EncodeMethodCall(call);
+  // Ownership of the buffer is transferred to the Windows message queue; the
+  // handler on the main thread re-wraps it in a unique_ptr to free it.
+  auto* raw = encoded.release();
+  if (!::PostMessage(host_window_, kNotificationThreadMessageId, 0,
+                     reinterpret_cast<LPARAM>(raw))) {
+    delete raw;
+  }
+}
+
+void WindowsNotificationPlugin::HandleBackgroundMessage(LPARAM lParam) {
+  auto* raw = reinterpret_cast<std::vector<uint8_t>*>(lParam);
+  if (raw == nullptr) return;
+  std::unique_ptr<std::vector<uint8_t>> buffer(raw);
+  auto decoded = codec_->DecodeMethodCall(buffer->data(), buffer->size());
+  if (!decoded) return;
+  channel_->InvokeMethod(
+      decoded->method_name(),
+      std::make_unique<EncodableValue>(*decoded->arguments()));
+}
+
+}  // namespace windows_notification

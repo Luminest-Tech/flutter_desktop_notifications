@@ -1,4 +1,4 @@
-const String alarmtTemplate =
+const String alarmTemplate =
     r'''<toast launch="action=viewAlarm&amp;alarmId=3" scenario="alarm">
 
   <visual>

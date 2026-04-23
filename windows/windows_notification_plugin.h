@@ -1,78 +1,71 @@
 #ifndef FLUTTER_PLUGIN_WINDOWS_NOTIFICATION_PLUGIN_H_
 #define FLUTTER_PLUGIN_WINDOWS_NOTIFICATION_PLUGIN_H_
-#include <winrt/Windows.foundation.h>
+
+#include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
-#include <windows.h>
 #include <winrt/Windows.UI.Notifications.h>
 #include <winrt/Windows.Data.Xml.Dom.h>
+#include <windows.h>
 
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
-#include <flutter/basic_message_channel.h>
 #include <flutter/standard_method_codec.h>
 #include <flutter/method_call.h>
-#include <flutter/method_codec.h>
-#include <winrt/Windows.UI.Core.h>
+
 #include <memory>
-#include <fstream>
-#include <streambuf>
+#include <optional>
 #include <string>
 
-using namespace winrt::Windows::UI::Core;
-using namespace winrt;
-using namespace Windows::UI::Notifications;
-using namespace Windows::Data::Xml::Dom;
-using namespace Windows::Foundation;
-using flutter::EncodableMap;
-using flutter::EncodableValue;
-using flutter::BasicMessageChannel;
-namespace windows_notification
-{
+namespace windows_notification {
 
-    class WindowsNotificationPlugin : public flutter::Plugin
-    {
-    public:
-        static void RegisterWithRegistrar(flutter::PluginRegistrarWindows *registrar);
+class WindowsNotificationPlugin : public flutter::Plugin {
+ public:
+  static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar);
 
-        // WindowsNotificationPlugin(std::unique_ptr<flutter::MethodChannel<>> channel);
-        WindowsNotificationPlugin(flutter::PluginRegistrarWindows* registrar);
-        virtual ~WindowsNotificationPlugin();
+  explicit WindowsNotificationPlugin(flutter::PluginRegistrarWindows* registrar);
+  ~WindowsNotificationPlugin() override;
 
-        // Disallow copy and assign.
-        WindowsNotificationPlugin(const WindowsNotificationPlugin &) = delete;
-        WindowsNotificationPlugin &operator=(const WindowsNotificationPlugin &) = delete;
+  WindowsNotificationPlugin(const WindowsNotificationPlugin&) = delete;
+  WindowsNotificationPlugin& operator=(const WindowsNotificationPlugin&) = delete;
 
-    private:
-        void HandleMethodCall(
-            const flutter::MethodCall<flutter::EncodableValue> &method_call,
-            std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
-        winrt::Windows::UI::Notifications::ToastNotificationManager toastManager{};
-        
-        std::unique_ptr<flutter::MethodChannel<>> channel_;
-        flutter::PluginRegistrarWindows* registrar;
-        HWND current_window;
-        const flutter::StandardMethodCodec* codec_;
+ private:
+  void HandleMethodCall(
+      const flutter::MethodCall<flutter::EncodableValue>& method_call,
+      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
 
-    public:
-        XmlDocument showNotificaationWithImage(std::string const title, std::string const body, std::string const image, std::string const temp);
-        XmlDocument showNotificaationWithoutImage(std::string const title, std::string const body, std::string const temp);
-        XmlDocument showCustomTemplate(std::string const temp);
-        void onActivate(Windows::UI::Notifications::ToastNotification const &notification, winrt::Windows::Foundation::IInspectable const &args);
-        void onDismissed(Windows::UI::Notifications::ToastNotification const &notification, Windows::UI::Notifications::ToastDismissedEventArgs const &args);
-        void clearAllNotification(std::string const appId);
-        void init();
-        void removeNotificationTag(std::string const tag, std::string const group, std::string const appId);
-        void removeNotificationGroup(std::string const group, std::string const appId);
-        void sendToMainThread(std::string methodName,EncodableValue value);
-        void handleBackgroundMessage(LPARAM lParam);
-        const EncodableValue *isNull(const EncodableMap &map, const char *key);
-        std::optional<LRESULT> WProc(HWND hWnd, UINT message,WPARAM wParam,LPARAM lParam);
-        int proc_id = -1;
-        HWND GetWindow();
-        const UINT NotificationThreadMessageId = static_cast<const UINT>(22222);
-        
-    };
+  void ShowToast(const flutter::EncodableMap& args);
+  void ClearHistory(const flutter::EncodableMap& args);
+  void RemoveNotification(const flutter::EncodableMap& args);
+  void RemoveGroup(const flutter::EncodableMap& args);
 
-} // namespace windows_notification
+  void OnActivate(
+      winrt::Windows::UI::Notifications::ToastNotification const& sender,
+      winrt::Windows::Foundation::IInspectable const& args);
+  void OnDismissed(
+      winrt::Windows::UI::Notifications::ToastNotification const& sender,
+      winrt::Windows::UI::Notifications::ToastDismissedEventArgs const& args);
 
-#endif // FLUTTER_PLUGIN_WINDOWS_NOTIFICATION_PLUGIN_H_
+  void PostEventToMainThread(std::string method_name,
+                             flutter::EncodableValue args);
+  void HandleBackgroundMessage(LPARAM lParam);
+  std::optional<LRESULT> WProc(HWND hwnd, UINT message, WPARAM wParam,
+                               LPARAM lParam);
+  void CacheHostWindow();
+
+  winrt::Windows::UI::Notifications::ToastNotificationManager toast_manager_{};
+
+  flutter::PluginRegistrarWindows* registrar_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
+  const flutter::StandardMethodCodec* codec_;
+
+  HWND host_window_ = nullptr;
+  int proc_id_ = -1;
+
+  // Custom WM_USER-range message used to marshal toast events back to the
+  // Flutter UI thread. Arbitrary value; only this plugin listens for it.
+  static constexpr UINT kNotificationThreadMessageId = 0x8000 + 0x5A5A;
+};
+
+}  // namespace windows_notification
+
+#endif  // FLUTTER_PLUGIN_WINDOWS_NOTIFICATION_PLUGIN_H_
