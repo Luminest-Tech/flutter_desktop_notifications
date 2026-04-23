@@ -37,6 +37,8 @@ class WindowsNotificationPlugin : public flutter::Plugin {
   void ClearHistory(const flutter::EncodableMap& args);
   void RemoveNotification(const flutter::EncodableMap& args);
   void RemoveGroup(const flutter::EncodableMap& args);
+  void RegisterAumid(const flutter::EncodableMap& args);
+  void BringToForeground();
 
   void OnActivate(
       winrt::Windows::UI::Notifications::ToastNotification const& sender,

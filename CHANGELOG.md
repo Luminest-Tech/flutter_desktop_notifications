@@ -15,6 +15,7 @@ Full modernization. Most of the public API was renamed; existing 1.x code will n
 
 ### New
 
+- `WindowsNotification.registerAumid` creates (or refreshes) the Start Menu shortcut Windows needs to attribute your toasts to your app's name and icon, instead of borrowing a system AUMID like PowerShell's. Unpackaged Flutter apps can now ship a normal toast experience by calling this once at startup.
 - `NotificationAction`, `NotificationInput` (text / selection), and `NotificationSelection` let you attach buttons and input fields to a plugin template without writing XML. The built-in template now composes real toast XML on the Dart side with proper escaping.
 - `NotificationButtonStyle` for `success` / `critical` action buttons.
 - `NotificationActivationType` enum (`foreground`, `background`, `protocol`) on action buttons.

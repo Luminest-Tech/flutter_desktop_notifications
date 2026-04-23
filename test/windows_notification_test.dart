@@ -14,10 +14,30 @@ class _RecordingPlatform
   String? lastApplicationId;
   String? lastTemplate;
   NotificationCallback? lastCallback;
+  String? lastAumid;
+  String? lastDisplayName;
+  String? lastIconPath;
 
   @override
   Future<void> init() async {
     lastMethod = 'init';
+  }
+
+  @override
+  Future<void> registerAumid({
+    required String aumid,
+    required String displayName,
+    String? iconPath,
+  }) async {
+    lastMethod = 'registerAumid';
+    lastAumid = aumid;
+    lastDisplayName = displayName;
+    lastIconPath = iconPath;
+  }
+
+  @override
+  Future<void> bringAppToForeground() async {
+    lastMethod = 'bringAppToForeground';
   }
 
   @override
@@ -112,6 +132,59 @@ void main() {
       void handler(NotificationCallbackDetails _) {}
       await notifier.setCallback(handler);
       expect(platform.lastCallback, same(handler));
+    });
+  });
+
+  group('WindowsNotification.registerAumid', () {
+    late _RecordingPlatform platform;
+
+    setUp(() {
+      platform = _RecordingPlatform();
+      WindowsNotificationPlatform.instance = platform;
+    });
+
+    test('forwards aumid, displayName, and iconPath', () async {
+      await WindowsNotification.registerAumid(
+        aumid: 'com.example.app',
+        displayName: 'Example',
+        iconPath: r'C:\path\to\icon.ico',
+      );
+      expect(platform.lastMethod, 'registerAumid');
+      expect(platform.lastAumid, 'com.example.app');
+      expect(platform.lastDisplayName, 'Example');
+      expect(platform.lastIconPath, r'C:\path\to\icon.ico');
+    });
+
+    test('rejects empty aumid', () {
+      expect(
+        () => WindowsNotification.registerAumid(
+            aumid: '', displayName: 'Example'),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects aumid longer than 129 characters', () {
+      expect(
+        () => WindowsNotification.registerAumid(
+            aumid: 'a' * 130, displayName: 'Example'),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects aumid with whitespace', () {
+      expect(
+        () => WindowsNotification.registerAumid(
+            aumid: 'com.example app', displayName: 'Example'),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects empty displayName', () {
+      expect(
+        () => WindowsNotification.registerAumid(
+            aumid: 'com.example.app', displayName: '   '),
+        throwsArgumentError,
+      );
     });
   });
 

@@ -21,18 +21,33 @@ dependencies:
 
 ### Registering an Application User Model ID (AUMID)
 
-Windows refuses to show a toast whose AUMID isn't registered somewhere. Your options:
+Windows refuses to show a toast whose AUMID isn't registered somewhere — and the AUMID is what the OS uses to look up the sender's name and icon on the toast.
 
-- **Packaged (MSIX) apps** — the manifest supplies the AUMID; pass `null` (don't set `applicationId`).
-- **Unpackaged apps** — register an AUMID via a Start Menu shortcut with the `System.AppUserModel.ID` property set, or via a COM server if you want action buttons to relaunch your app. See the [Microsoft toast docs for unpackaged apps](https://learn.microsoft.com/windows/apps/design/shell/tiles-and-notifications/send-local-toast-other-apps).
-
-For quick demos *only*, you can use the pre-registered PowerShell AUMID:
+- **Packaged (MSIX) apps** — the manifest supplies the AUMID automatically; leave `applicationId` null.
+- **Unpackaged apps** — use the built-in helper, called once on startup:
 
 ```dart
-const demoAumid = r'{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe';
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await WindowsNotification.registerAumid(
+    aumid: 'com.example.myapp',
+    displayName: 'My App',
+    // iconPath: 'C:\\path\\to\\custom.ico',  // optional; defaults to the exe's embedded icon
+  );
+  runApp(const MyApp());
+}
+
+final notifier = WindowsNotification(applicationId: 'com.example.myapp');
 ```
 
-Don't ship that — toasts will appear under the PowerShell icon and you'll have no control over activation.
+`registerAumid` writes (or refreshes) a Start Menu shortcut at `%APPDATA%\Microsoft\Windows\Start Menu\Programs\{displayName}.lnk` that points at the running executable and has `System.AppUserModel.ID` set to the AUMID. The call is idempotent — run it on every launch. If you want your installer to clean up after uninstall, delete that `.lnk` file.
+
+Microsoft recommends AUMIDs in the form `CompanyName.ProductName.SubProduct.VersionInformation`; the helper enforces the hard limits (non-empty, ≤ 129 chars, no spaces).
+
+Caveats:
+
+- `registerAumid` only sets up enough for toasts to display with your branding. To get action-button clicks to *relaunch* your app when it's closed, you additionally need a COM server registered against the AUMID — out of scope for this plugin.
+- If you move or rename your exe, call `registerAumid` again so the shortcut's target is refreshed.
 
 ## Basic use
 

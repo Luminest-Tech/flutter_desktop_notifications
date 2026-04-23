@@ -21,6 +21,17 @@ abstract class WindowsNotificationPlatform extends PlatformInterface {
   Future<void> init() =>
       throw UnimplementedError('init() has not been implemented.');
 
+  Future<void> registerAumid({
+    required String aumid,
+    required String displayName,
+    String? iconPath,
+  }) =>
+      throw UnimplementedError('registerAumid() has not been implemented.');
+
+  Future<void> bringAppToForeground() =>
+      throw UnimplementedError(
+          'bringAppToForeground() has not been implemented.');
+
   Future<void> showPluginTemplate(
           NotificationMessage message, String? applicationId) =>
       throw UnimplementedError(

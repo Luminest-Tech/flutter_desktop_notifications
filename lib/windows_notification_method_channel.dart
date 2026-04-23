@@ -23,6 +23,25 @@ class MethodChannelWindowsNotification extends WindowsNotificationPlatform {
   }
 
   @override
+  Future<void> registerAumid({
+    required String aumid,
+    required String displayName,
+    String? iconPath,
+  }) async {
+    final args = <String, dynamic>{
+      'aumid': aumid,
+      'display_name': displayName,
+    };
+    if (iconPath != null) args['icon_path'] = iconPath;
+    await methodChannel.invokeMethod('register_aumid', args);
+  }
+
+  @override
+  Future<void> bringAppToForeground() async {
+    await methodChannel.invokeMethod('bring_to_front');
+  }
+
+  @override
   Future<void> showPluginTemplate(
       NotificationMessage message, String? applicationId) async {
     assert(message.templateType == TemplateType.plugin,

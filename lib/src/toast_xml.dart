@@ -21,19 +21,61 @@ String _escapeXml(String s) {
   return sb.toString();
 }
 
-/// Builds the full toast XML for a plugin-template [message]. The caller is
-/// expected to use [NotificationMessage.fromPluginTemplate]; this function
-/// does not validate that.
+String _scenarioAttr(NotificationScenario s) => switch (s) {
+      NotificationScenario.defaultScenario => 'default',
+      NotificationScenario.reminder => 'reminder',
+      NotificationScenario.alarm => 'alarm',
+      NotificationScenario.incomingCall => 'incomingCall',
+      NotificationScenario.urgent => 'urgent',
+    };
+
+String _textTag(NotificationText t) {
+  final attrs = <String>[];
+  if (t.style != null) attrs.add('hint-style="${t.style!.name}"');
+  if (t.alignment != null) attrs.add('hint-align="${t.alignment!.name}"');
+  if (t.maxLines != null) attrs.add('hint-maxLines="${t.maxLines}"');
+  final open = attrs.isEmpty ? '<text>' : '<text ${attrs.join(' ')}>';
+  return '$open${_escapeXml(t.content)}</text>';
+}
+
+/// Builds the full toast XML for a plugin-template [message].
 String buildPluginTemplateXml(NotificationMessage message) {
   final sb = StringBuffer('<?xml version="1.0" encoding="utf-8"?>\n');
-  sb.write('<toast activationType="protocol">\n');
+
+  // <toast …>
+  final activation =
+      message.activationType ?? NotificationActivationType.foreground;
+  sb.write('<toast activationType="${activation.name}"');
+  if (message.scenario != null) {
+    sb.write(' scenario="${_scenarioAttr(message.scenario!)}"');
+  }
+  if (message.duration != null) {
+    sb.write(' duration="${message.duration!.name}"');
+  }
+  if (message.displayTimestamp != null) {
+    sb.write(
+        ' displayTimestamp="${message.displayTimestamp!.toUtc().toIso8601String()}"');
+  }
+  final anyStyled =
+      message.actions.any((a) => a.buttonStyle != null && !a.contextMenu);
+  if (anyStyled) sb.write(' useButtonStyle="true"');
+  sb.write('>\n');
+
+  // <visual>
   sb.write('  <visual>\n');
   sb.write('    <binding template="ToastGeneric">\n');
+  if (message.heroImage != null) {
+    sb.write(
+        '      <image placement="hero" src="${_escapeXml(message.heroImage!)}"/>\n');
+  }
   if (message.title != null) {
     sb.write('      <text>${_escapeXml(message.title!)}</text>\n');
   }
   if (message.body != null) {
     sb.write('      <text>${_escapeXml(message.body!)}</text>\n');
+  }
+  for (final t in message.extraTexts) {
+    sb.write('      ${_textTag(t)}\n');
   }
   if (message.image != null) {
     sb.write(
@@ -42,9 +84,43 @@ String buildPluginTemplateXml(NotificationMessage message) {
   if (message.largeImage != null) {
     sb.write('      <image src="${_escapeXml(message.largeImage!)}"/>\n');
   }
+  if (message.progress != null) {
+    final p = message.progress!;
+    sb.write('      <progress');
+    if (p.title != null) {
+      sb.write(' title="${_escapeXml(p.title!)}"');
+    }
+    final progressValue = p.value == null
+        ? 'indeterminate'
+        : p.value!.clamp(0.0, 1.0).toString();
+    sb.write(' value="$progressValue"');
+    if (p.valueStringOverride != null) {
+      sb.write(
+          ' valueStringOverride="${_escapeXml(p.valueStringOverride!)}"');
+    }
+    sb.write(' status="${_escapeXml(p.status)}"');
+    sb.write('/>\n');
+  }
+  if (message.attribution != null) {
+    sb.write(
+        '      <text placement="attribution">${_escapeXml(message.attribution!)}</text>\n');
+  }
   sb.write('    </binding>\n');
   sb.write('  </visual>\n');
 
+  // <audio>
+  if (message.audio != null) {
+    final a = message.audio!;
+    if (a.silent) {
+      sb.write('  <audio silent="true"/>\n');
+    } else if (a.sourceUri != null) {
+      sb.write('  <audio src="${_escapeXml(a.sourceUri!)}"');
+      if (a.loop) sb.write(' loop="true"');
+      sb.write('/>\n');
+    }
+  }
+
+  // <actions>
   if (message.actions.isNotEmpty || message.inputs.isNotEmpty) {
     sb.write('  <actions>\n');
     for (final input in message.inputs) {
@@ -82,6 +158,9 @@ String buildPluginTemplateXml(NotificationMessage message) {
       }
       if (a.buttonStyle != null) {
         sb.write(' hint-buttonStyle="${a.buttonStyle!.name}"');
+      }
+      if (a.contextMenu) {
+        sb.write(' placement="contextMenu"');
       }
       sb.write('/>\n');
     }

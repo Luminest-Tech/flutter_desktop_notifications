@@ -87,6 +87,87 @@ void main() {
       expect(decoded['payload'], {'key': 'value'});
     });
 
+    test('emits scenario, duration, attribution, hero image, audio, progress',
+        () async {
+      final msg = NotificationMessage.fromPluginTemplate(
+        'rich',
+        'Title',
+        'Body',
+        heroImage: 'hero.png',
+        attribution: 'Source',
+        scenario: NotificationScenario.urgent,
+        duration: NotificationDuration.long,
+        audio: const NotificationAudio(
+            sound: NotificationSound.Alarm, loop: true),
+        progress: const NotificationProgress(
+          title: 'Upload',
+          value: 0.5,
+          valueStringOverride: '50 of 100',
+          status: 'Uploading…',
+        ),
+        extraTexts: const [
+          NotificationText('Subtitle line',
+              style: NotificationTextStyle.captionSubtle),
+        ],
+      );
+      await platform.showPluginTemplate(msg, null);
+      final xml = (calls.single.arguments as Map)['template'] as String;
+
+      expect(xml, contains('scenario="urgent"'));
+      expect(xml, contains('duration="long"'));
+      expect(xml, contains('placement="hero" src="hero.png"'));
+      expect(xml, contains('placement="attribution">Source</text>'));
+      expect(xml, contains('hint-style="captionSubtle"'));
+      expect(
+          xml,
+          contains(
+              '<audio src="ms-winsoundevent:Notification.Alarm" loop="true"/>'));
+      expect(xml, contains('<progress'));
+      expect(xml, contains('title="Upload"'));
+      expect(xml, contains('value="0.5"'));
+      expect(xml, contains('valueStringOverride="50 of 100"'));
+      expect(xml, contains('status="Uploading…"'));
+    });
+
+    test('context-menu actions get placement="contextMenu"', () async {
+      final msg = NotificationMessage.fromPluginTemplate(
+        'menu',
+        'T',
+        'B',
+        actions: const [
+          NotificationAction(
+              content: 'Report', arguments: 'a:report', contextMenu: true),
+        ],
+      );
+      await platform.showPluginTemplate(msg, null);
+      final xml = (calls.single.arguments as Map)['template'] as String;
+      expect(xml, contains('placement="contextMenu"'));
+    });
+
+    test('silent audio emits <audio silent="true"/>', () async {
+      final msg = NotificationMessage.fromPluginTemplate(
+        'q',
+        'T',
+        'B',
+        audio: const NotificationAudio.silent(),
+      );
+      await platform.showPluginTemplate(msg, null);
+      final xml = (calls.single.arguments as Map)['template'] as String;
+      expect(xml, contains('<audio silent="true"/>'));
+    });
+
+    test('indeterminate progress serializes as "indeterminate"', () async {
+      final msg = NotificationMessage.fromPluginTemplate(
+        'i',
+        'T',
+        'B',
+        progress: const NotificationProgress(status: 'Working'),
+      );
+      await platform.showPluginTemplate(msg, null);
+      final xml = (calls.single.arguments as Map)['template'] as String;
+      expect(xml, contains('value="indeterminate"'));
+    });
+
     test('setCallback delivers activation events', () async {
       NotificationCallbackDetails? received;
       await platform.setCallback((d) => received = d);

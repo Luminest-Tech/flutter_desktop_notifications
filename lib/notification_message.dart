@@ -20,7 +20,7 @@ enum NotificationEvent {
 
 enum TemplateType { plugin, custom }
 
-/// How an action button activates the app when tapped.
+/// How an action button — or the toast body itself — activates the app.
 enum NotificationActivationType {
   /// Opens the app in the foreground with the action's arguments.
   foreground,
@@ -28,9 +28,51 @@ enum NotificationActivationType {
   /// Invokes a background task (packaged apps only).
   background,
 
-  /// Launches a protocol URI (e.g. `myapp://open?id=1`).
+  /// Launches a protocol URI (e.g. `https://…` or `myapp://…`).
   protocol,
 }
+
+/// Toast scenario — drives sound, persistence, and special UI treatment.
+///
+/// - [defaultScenario]: standard toast, auto-dismisses after [NotificationDuration.short].
+/// - [reminder]: persistent until the user dismisses it, offers a snooze menu.
+/// - [alarm]: persistent, louder/looping sound, built-in Snooze/Dismiss buttons
+///   unless you supply your own `<action>` elements.
+/// - [incomingCall]: full-screen call UI on lock screen, looping ringtone.
+/// - [urgent]: bypasses Focus Assist (Windows 11+).
+enum NotificationScenario {
+  defaultScenario,
+  reminder,
+  alarm,
+  incomingCall,
+  urgent,
+}
+
+enum NotificationDuration { short, long }
+
+/// Built-in text styles Windows renders for ToastGeneric bindings.
+/// See https://learn.microsoft.com/windows/apps/design/shell/tiles-and-notifications/adaptive-interactive-toasts
+enum NotificationTextStyle {
+  caption,
+  captionSubtle,
+  body,
+  bodySubtle,
+  base,
+  baseSubtle,
+  subtitle,
+  subtitleSubtle,
+  title,
+  titleSubtle,
+  titleNumeral,
+  subheader,
+  subheaderSubtle,
+  subheaderNumeral,
+  header,
+  headerSubtle,
+  headerNumeral,
+}
+
+enum NotificationTextAlignment { left, center, right }
 
 /// Visual emphasis for an action button.
 enum NotificationButtonStyle { success, critical }
@@ -45,7 +87,6 @@ class NotificationSelection {
 /// An input field shown inside a toast: either a free-form text box or a
 /// selection list. Associate with an action button via [NotificationAction.inputId].
 class NotificationInput {
-  /// A free-form text input (reply box).
   const NotificationInput.text({
     required this.id,
     this.title,
@@ -54,8 +95,6 @@ class NotificationInput {
         selections = const [],
         defaultSelectionId = null;
 
-  /// A selection list. Provide [selections]; optionally pre-select one with
-  /// [defaultSelectionId].
   const NotificationInput.selection({
     required this.id,
     required this.selections,
@@ -72,7 +111,8 @@ class NotificationInput {
   final String? defaultSelectionId;
 }
 
-/// An action button at the bottom of a toast.
+/// An action. Rendered as a button by default; pass [contextMenu] = true to
+/// put it under the toast's `…` overflow menu instead.
 class NotificationAction {
   const NotificationAction({
     required this.content,
@@ -81,48 +121,162 @@ class NotificationAction {
     this.imageUri,
     this.inputId,
     this.buttonStyle,
+    this.contextMenu = false,
   });
 
-  /// The label shown on the button.
   final String content;
-
-  /// App-defined string passed back via [NotificationCallbackDetails.arguments].
   final String arguments;
-
   final NotificationActivationType activationType;
-
-  /// Optional icon for the button.
   final String? imageUri;
-
-  /// If set, renders this action next to the matching [NotificationInput] so
-  /// it becomes a reply-send button for that input.
   final String? inputId;
-
   final NotificationButtonStyle? buttonStyle;
+  final bool contextMenu;
+}
+
+/// Structured text line in the toast body. A plain string works too
+/// (implicitly uses defaults), but use [NotificationText] when you need
+/// styling or alignment.
+class NotificationText {
+  const NotificationText(
+    this.content, {
+    this.style,
+    this.alignment,
+    this.maxLines,
+  });
+  final String content;
+  final NotificationTextStyle? style;
+  final NotificationTextAlignment? alignment;
+  final int? maxLines;
+}
+
+/// Named system sounds. Supply to [NotificationAudio.sound]. For arbitrary
+/// audio files, construct with [NotificationAudio.custom].
+///
+/// Enum names intentionally mirror the ms-winsoundevent source names
+/// (`Notification.Default`, `Notification.IM`, etc.), so emission doesn't
+/// need a translation table.
+// ignore_for_file: constant_identifier_names
+enum NotificationSound {
+  Default,
+  IM,
+  Mail,
+  Reminder,
+  SMS,
+  Alarm,
+  Alarm2,
+  Alarm3,
+  Alarm4,
+  Alarm5,
+  Alarm6,
+  Alarm7,
+  Alarm8,
+  Alarm9,
+  Alarm10,
+  Call,
+  Call2,
+  Call3,
+  Call4,
+  Call5,
+  Call6,
+  Call7,
+  Call8,
+  Call9,
+  Call10,
+}
+
+/// Audio behavior for the toast. [silent] suppresses any sound.
+/// [loop] keeps the sound playing for the duration of the toast — only valid
+/// for Alarm/Call family sounds and requires a long-duration toast or a
+/// scenario like `alarm` / `incomingCall`.
+class NotificationAudio {
+  const NotificationAudio({
+    this.sound,
+    this.silent = false,
+    this.loop = false,
+  }) : _custom = null;
+
+  /// Silent toast — no sound at all.
+  const NotificationAudio.silent()
+      : sound = null,
+        silent = true,
+        loop = false,
+        _custom = null;
+
+  /// Use a custom ms-winsoundevent or file-URI source. Rarely needed; prefer
+  /// [NotificationAudio.new] with [NotificationSound].
+  const NotificationAudio.custom(String source, {this.loop = false})
+      : sound = null,
+        silent = false,
+        _custom = source;
+
+  final NotificationSound? sound;
+  final bool silent;
+  final bool loop;
+  final String? _custom;
+
+  String? get sourceUri {
+    if (_custom != null) return _custom;
+    if (sound == null) return null;
+    return 'ms-winsoundevent:Notification.${sound!.name}';
+  }
+}
+
+/// A progress bar rendered below the text of the toast.
+///
+/// [value] must be in `[0.0, 1.0]` or `null` for indeterminate.
+class NotificationProgress {
+  const NotificationProgress({
+    this.title,
+    this.value,
+    this.valueStringOverride,
+    this.status = '',
+  });
+
+  final String? title;
+
+  /// `null` → indeterminate; otherwise clamped to `[0.0, 1.0]`.
+  final double? value;
+
+  /// Text shown in place of the default `35%` readout — e.g. `"12 of 34"`.
+  final String? valueStringOverride;
+
+  /// Small line of text below the progress bar (e.g. `"Uploading…"`).
+  final String status;
 }
 
 class NotificationMessage {
-  /// Build a message using one of the plugin's built-in templates. Supply
-  /// [actions] / [inputs] to attach buttons and input fields.
+  /// Build a toast from the plugin's built-in template.
+  ///
+  /// [title] and [body] populate the two primary text lines. Everything else
+  /// is optional. See [NotificationAction] / [NotificationInput] for buttons
+  /// and reply boxes; [NotificationAudio] / [NotificationProgress] /
+  /// [NotificationScenario] etc. for the richer features.
   NotificationMessage.fromPluginTemplate(
     this.id,
     String this.title,
     String this.body, {
     this.image,
     this.largeImage,
+    this.heroImage,
+    this.extraTexts = const [],
+    this.attribution,
     this.launch,
     this.group,
     this.payload = const {},
     this.actions = const [],
     this.inputs = const [],
+    this.audio,
+    this.progress,
+    this.scenario,
+    this.duration,
+    this.activationType,
+    this.displayTimestamp,
   }) : templateType = TemplateType.plugin {
     assert(id.trim().isNotEmpty, 'id must not be empty');
     assert(group == null || group!.trim().isNotEmpty,
         'group must not be empty when provided');
   }
 
-  /// Build a message whose content is provided as a full toast XML string
-  /// (passed separately to [WindowsNotification.showNotificationCustomTemplate]).
   NotificationMessage.fromCustomTemplate(
     this.id, {
     this.group,
@@ -133,8 +287,17 @@ class NotificationMessage {
         body = null,
         image = null,
         largeImage = null,
+        heroImage = null,
+        extraTexts = const [],
+        attribution = null,
         actions = const [],
-        inputs = const [] {
+        inputs = const [],
+        audio = null,
+        progress = null,
+        scenario = null,
+        duration = null,
+        activationType = null,
+        displayTimestamp = null {
     assert(id.trim().isNotEmpty, 'id must not be empty');
     assert(group == null || group!.trim().isNotEmpty,
         'group must not be empty when provided');
@@ -146,48 +309,67 @@ class NotificationMessage {
         body = json['body'] as String?,
         image = json['image'] as String?,
         largeImage = json['largeImage'] as String?,
+        heroImage = json['heroImage'] as String?,
+        extraTexts = const [],
+        attribution = json['attribution'] as String?,
         group = json['group'] as String?,
         launch = json['launch'] as String?,
         payload = Map<String, dynamic>.from(json['payload'] as Map? ?? {}),
         templateType = TemplateType.values
             .firstWhere((e) => e.name == json['templateType']),
         actions = const [],
-        inputs = const [];
+        inputs = const [],
+        audio = null,
+        progress = null,
+        scenario = null,
+        duration = null,
+        activationType = null,
+        displayTimestamp = null;
 
-  /// Unique identifier within the notification's group.
   final String id;
-
   final TemplateType templateType;
   final String? title;
   final String? body;
   final String? image;
   final String? largeImage;
-
-  /// Group label, used to remove a batch of notifications at once.
+  final String? heroImage;
+  final List<NotificationText> extraTexts;
+  final String? attribution;
   final String? group;
-
-  /// Launch string delivered to the app when the toast body is tapped.
   final String? launch;
-
   final Map<String, dynamic> payload;
   final List<NotificationAction> actions;
   final List<NotificationInput> inputs;
+  final NotificationAudio? audio;
+  final NotificationProgress? progress;
+  final NotificationScenario? scenario;
+  final NotificationDuration? duration;
 
-  /// Wire-format payload embedded in the toast XML so the original message
-  /// can be reconstructed in callback handlers. Internal.
+  /// Controls how clicking the toast body itself activates the app.
+  ///
+  /// Defaults to [NotificationActivationType.foreground] for plugin
+  /// templates — clicking fires an `activated` event with [launch] as the
+  /// arguments string. Set to [NotificationActivationType.protocol] when
+  /// [launch] is a URL you want Windows to open.
+  final NotificationActivationType? activationType;
+
+  /// If set, overrides the "when" timestamp shown in the Action Center.
+  final DateTime? displayTimestamp;
+
   Map<String, dynamic> toPayloadMap() => {
         'title': title,
         'body': body,
         'tag': id,
         'image': image,
         'largeImage': largeImage,
+        'heroImage': heroImage,
+        'attribution': attribution,
         'group': group,
         'launch': launch,
         'templateType': templateType.name,
         'payload': payload,
       };
 
-  /// Reconstruct from a callback payload. Internal.
   factory NotificationMessage.fromCallbackPayload(String encoded) =>
       NotificationMessage._fromJson(
           json.decode(encoded) as Map<String, dynamic>);
@@ -204,16 +386,12 @@ class NotificationCallbackDetails {
     required this.userInput,
   });
 
-  /// What happened to the notification.
   final NotificationEvent event;
-
-  /// The message that was originally sent.
   final NotificationMessage message;
 
-  /// `arguments` attribute from the activated `<action>` or `<toast>`. Null
-  /// for dismissal events.
+  /// `arguments` attribute from the activated `<action>`, or the toast's
+  /// `launch` value if the body itself was tapped. Null for dismissal events.
   final String? arguments;
 
-  /// Values from any `<input>` elements on the toast, keyed by input id.
   final Map<String, String> userInput;
 }

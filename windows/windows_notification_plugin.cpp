@@ -1,6 +1,12 @@
 #include "windows_notification_plugin.h"
 
+#include <propkey.h>
+#include <propvarutil.h>
+#include <shlobj.h>
+#include <shobjidl.h>
+
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -38,6 +44,28 @@ std::optional<std::string> GetOptionalString(const EncodableMap& args,
   if (it == args.end()) return std::nullopt;
   if (const auto* s = std::get_if<std::string>(&it->second)) return *s;
   return std::nullopt;
+}
+
+// Windows filename reserved chars, mapped to '_'.
+std::wstring SanitizeShortcutName(std::wstring s) {
+  for (auto& c : s) {
+    switch (c) {
+      case L'\\':
+      case L'/':
+      case L':':
+      case L'*':
+      case L'?':
+      case L'"':
+      case L'<':
+      case L'>':
+      case L'|':
+        c = L'_';
+        break;
+      default:
+        break;
+    }
+  }
+  return s;
 }
 
 }  // namespace
@@ -113,6 +141,12 @@ void WindowsNotificationPlugin::HandleMethodCall(
     } else if (name == "remove_group") {
       RemoveGroup(args);
       result->Success();
+    } else if (name == "register_aumid") {
+      RegisterAumid(args);
+      result->Success();
+    } else if (name == "bring_to_front") {
+      BringToForeground();
+      result->Success();
     } else {
       result->NotImplemented();
     }
@@ -185,6 +219,81 @@ void WindowsNotificationPlugin::RemoveGroup(const EncodableMap& args) {
   } else {
     toast_manager_.History().RemoveGroup(winrt::to_hstring(group));
   }
+}
+
+void WindowsNotificationPlugin::RegisterAumid(const EncodableMap& args) {
+  const std::string aumid_utf8 = GetString(args, "aumid");
+  const std::string display_name_utf8 = GetString(args, "display_name");
+  const auto icon_path_utf8 = GetOptionalString(args, "icon_path");
+
+  if (aumid_utf8.empty() || display_name_utf8.empty()) {
+    throw std::invalid_argument("aumid and display_name are required");
+  }
+
+  const winrt::hstring aumid = winrt::to_hstring(aumid_utf8);
+  const winrt::hstring display_name = winrt::to_hstring(display_name_utf8);
+
+  wchar_t exe_path[MAX_PATH];
+  if (::GetModuleFileNameW(nullptr, exe_path, MAX_PATH) == 0) {
+    winrt::throw_last_error();
+  }
+
+  PWSTR programs_folder = nullptr;
+  winrt::check_hresult(::SHGetKnownFolderPath(FOLDERID_Programs, 0, nullptr,
+                                              &programs_folder));
+  std::wstring shortcut_path(programs_folder);
+  ::CoTaskMemFree(programs_folder);
+
+  shortcut_path += L"\\";
+  shortcut_path += SanitizeShortcutName(std::wstring(display_name));
+  shortcut_path += L".lnk";
+
+  winrt::com_ptr<IShellLinkW> shell_link;
+  winrt::check_hresult(::CoCreateInstance(CLSID_ShellLink, nullptr,
+                                          CLSCTX_INPROC_SERVER,
+                                          IID_PPV_ARGS(shell_link.put())));
+
+  winrt::check_hresult(shell_link->SetPath(exe_path));
+
+  if (icon_path_utf8) {
+    const winrt::hstring icon_path = winrt::to_hstring(*icon_path_utf8);
+    winrt::check_hresult(shell_link->SetIconLocation(icon_path.c_str(), 0));
+  } else {
+    // Fall back to the icon embedded in the running exe.
+    winrt::check_hresult(shell_link->SetIconLocation(exe_path, 0));
+  }
+
+  winrt::com_ptr<IPropertyStore> prop_store;
+  winrt::check_hresult(
+      shell_link->QueryInterface(IID_PPV_ARGS(prop_store.put())));
+
+  PROPVARIANT aumid_var{};
+  winrt::check_hresult(::InitPropVariantFromString(aumid.c_str(), &aumid_var));
+  const HRESULT set_hr = prop_store->SetValue(PKEY_AppUserModel_ID, aumid_var);
+  ::PropVariantClear(&aumid_var);
+  winrt::check_hresult(set_hr);
+  winrt::check_hresult(prop_store->Commit());
+
+  winrt::com_ptr<IPersistFile> persist_file;
+  winrt::check_hresult(
+      shell_link->QueryInterface(IID_PPV_ARGS(persist_file.put())));
+  winrt::check_hresult(persist_file->Save(shortcut_path.c_str(), TRUE));
+}
+
+void WindowsNotificationPlugin::BringToForeground() {
+  if (host_window_ == nullptr) {
+    CacheHostWindow();
+    if (host_window_ == nullptr) return;
+  }
+  if (::IsIconic(host_window_)) {
+    ::ShowWindow(host_window_, SW_RESTORE);
+  } else {
+    ::ShowWindow(host_window_, SW_SHOW);
+  }
+  // SetForegroundWindow is best-effort; Windows may refuse if the calling
+  // process doesn't own the foreground focus. The ShowWindow call above at
+  // least un-minimizes in that case.
+  ::SetForegroundWindow(host_window_);
 }
 
 void WindowsNotificationPlugin::OnActivate(ToastNotification const& sender,
