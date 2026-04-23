@@ -114,8 +114,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
     return file.path;
   }
 
-  // ---- toast factories ----
-
   Future<void> _simpleToast() => _notifier.showNotificationPluginTemplate(
         NotificationMessage.fromPluginTemplate(
           'simple',
@@ -171,7 +169,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
           'Design review · Room 2001',
           scenario: NotificationScenario.reminder,
           extraTexts: const [
-            NotificationText('10:30 AM — 11:00 AM',
+            NotificationText('10:30 to 11:00 AM',
                 style: NotificationTextStyle.captionSubtle),
           ],
           attribution: 'Calendar',
@@ -204,7 +202,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
         NotificationMessage.fromPluginTemplate(
           'urgent',
           'Production down',
-          'api.example.com — 503 for 2 minutes.',
+          'api.example.com, 503 for 2 minutes.',
           scenario: NotificationScenario.urgent,
           audio: const NotificationAudio(sound: NotificationSound.Alarm2),
           actions: const [
@@ -279,8 +277,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
       ),
     );
   }
-
-  // ---- UI ----
 
   @override
   Widget build(BuildContext context) {
@@ -371,7 +367,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
       _GalleryItem(
         id: 'music',
         title: 'Now playing',
-        body: 'Neil Young — Harvest Moon',
+        body: 'Neil Young · Harvest Moon',
         builder: () => const MusicCard(),
       ),
       _GalleryItem(
@@ -478,7 +474,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                   const _SectionHeader(
                     'Hero widget gallery',
                     trailing:
-                        'Tap a card — Flutter widget rendered via WidgetToImage at 2×',
+                        'Tap a card. Flutter widget rendered via WidgetToImage at 2×',
                   ),
                   _GalleryGrid(
                     items: gallery,
@@ -506,7 +502,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
   }
 }
 
-// ---- small components ----
 
 class _Masthead extends StatelessWidget {
   @override
@@ -532,7 +527,7 @@ class _Masthead extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'A little mood board of toasts.',
+                  'Windows toasts, handcrafted.',
                   style: Theme.of(context)
                       .textTheme
                       .displayLarge
@@ -540,9 +535,8 @@ class _Masthead extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Every tile below fires a real Windows toast. The gallery at '
-                  'the bottom renders any Flutter widget to a PNG via '
-                  'WidgetToImage and slots it into the hero image.',
+                  'Every tile fires a real toast. The gallery at the bottom '
+                  'rasterizes a Flutter widget and uses it as the hero image.',
                   style: Theme.of(context).textTheme.bodyMedium,
                   maxLines: 3,
                 ),
@@ -818,7 +812,6 @@ int _columns(BuildContext context, {required double maxExtent}) {
   return (width / maxExtent).ceil().clamp(1, 4);
 }
 
-// ---- gallery ----
 
 class _GalleryItem {
   _GalleryItem({
@@ -970,7 +963,6 @@ class _GalleryCardState extends State<_GalleryCard> {
   }
 }
 
-// ---- event log ----
 
 class _EventLogEntry {
   _EventLogEntry({

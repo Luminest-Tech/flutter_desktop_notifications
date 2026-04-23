@@ -4,13 +4,13 @@ Send native Windows toast notifications from Flutter.
 
 Supports:
 
-- Built-in templates with title, body, small image (circle crop, `appLogoOverride`), and large hero image.
+- Built-in templates with title, body, small image (circle-cropped `appLogoOverride`), and large hero image.
 - Fully custom toast XML for anything the built-ins don't cover.
-- Structured action buttons and input fields (text or selection) — you don't need to hand-write XML to get a reply box or snooze list.
+- Structured action buttons and input fields (text or selection). No hand-written XML needed for reply boxes or snooze lists.
 - Activation and dismissal callbacks with the original message, action arguments, and user input values.
 - Removing notifications from the Action Center by id, by group, or all at once.
 
-Windows-only. If you need Android/iOS notifications too, pair this with `flutter_local_notifications` or similar.
+Windows-only. Pair with `flutter_local_notifications` if you also need Android or iOS.
 
 ## Getting started
 
@@ -21,10 +21,10 @@ dependencies:
 
 ### Registering an Application User Model ID (AUMID)
 
-Windows refuses to show a toast whose AUMID isn't registered somewhere — and the AUMID is what the OS uses to look up the sender's name and icon on the toast.
+Windows will not show a toast whose AUMID isn't registered. The AUMID is also what the OS uses to look up the sender's name and icon.
 
-- **Packaged (MSIX) apps** — the manifest supplies the AUMID automatically; leave `applicationId` null.
-- **Unpackaged apps** — use the built-in helper, called once on startup:
+- **Packaged (MSIX) apps**: the manifest supplies the AUMID. Leave `applicationId` null.
+- **Unpackaged apps**: use the built-in helper once on startup.
 
 ```dart
 Future<void> main() async {
@@ -40,14 +40,14 @@ Future<void> main() async {
 final notifier = WindowsNotification(applicationId: 'com.example.myapp');
 ```
 
-`registerAumid` writes (or refreshes) a Start Menu shortcut at `%APPDATA%\Microsoft\Windows\Start Menu\Programs\{displayName}.lnk` that points at the running executable and has `System.AppUserModel.ID` set to the AUMID. The call is idempotent — run it on every launch. If you want your installer to clean up after uninstall, delete that `.lnk` file.
+`registerAumid` writes (or refreshes) a Start Menu shortcut at `%APPDATA%\Microsoft\Windows\Start Menu\Programs\{displayName}.lnk` that points at the running executable and has `System.AppUserModel.ID` set to the AUMID. The call is idempotent, so it's safe to run on every launch. Uninstallers should delete that `.lnk` to clean up.
 
-Microsoft recommends AUMIDs in the form `CompanyName.ProductName.SubProduct.VersionInformation`; the helper enforces the hard limits (non-empty, ≤ 129 chars, no spaces).
+Microsoft recommends AUMIDs in the form `CompanyName.ProductName.SubProduct.VersionInformation`. The helper enforces the hard limits (non-empty, 129 characters or fewer, no whitespace).
 
 Caveats:
 
-- `registerAumid` only sets up enough for toasts to display with your branding. To get action-button clicks to *relaunch* your app when it's closed, you additionally need a COM server registered against the AUMID — out of scope for this plugin.
-- If you move or rename your exe, call `registerAumid` again so the shortcut's target is refreshed.
+- `registerAumid` only sets up enough for Windows to display toasts under your branding. Action-button clicks that need to cold-launch a closed app require a COM server registered against the AUMID, which is out of scope here.
+- If you move or rename your exe, call `registerAumid` again so the shortcut points at the new location.
 
 ## Basic use
 
@@ -59,10 +59,10 @@ final notifier = WindowsNotification(applicationId: 'com.example.myapp');
 await notifier.setCallback((details) {
   switch (details.event) {
     case NotificationEvent.activated:
-      // details.arguments — the `arguments` string from the activated <action>
-      //                     or the <toast>'s `launch` attribute.
-      // details.userInput  — { inputId: value } from <input> elements.
-      // details.message    — the original NotificationMessage.
+      // details.arguments: `arguments` from the activated <action>, or the
+      //                    <toast>'s `launch` attribute.
+      // details.userInput: { inputId: value } from <input> elements.
+      // details.message:   the original NotificationMessage.
       break;
     case NotificationEvent.dismissedByUser:
     case NotificationEvent.dismissedByApp:
@@ -82,7 +82,7 @@ await notifier.showNotificationPluginTemplate(
 
 ## Action buttons and inputs
 
-Attach buttons and input fields directly to a built-in template — no XML required:
+Attach buttons and input fields directly to a built-in template:
 
 ```dart
 await notifier.showNotificationPluginTemplate(
@@ -109,7 +109,7 @@ await notifier.showNotificationPluginTemplate(
 );
 ```
 
-In your callback, the user's typed text is available at `details.userInput['reply']`.
+In your callback, the user's typed text is at `details.userInput['reply']`.
 
 Selection inputs:
 
@@ -185,7 +185,7 @@ await notifier.removeNotificationId('meeting-1983', 'meetings'); // a single toa
 
 ## Migration from 1.x
 
-2.0 is a breaking release. The public API was renamed to fix long-standing typos, and a structured builder for actions/inputs replaces hand-written XML for the common cases. A quick crib sheet:
+2.0 is a breaking release. The public API was renamed to fix long-standing typos, and a structured builder for actions/inputs replaces hand-written XML for the common cases.
 
 | 1.x | 2.0 |
 | --- | --- |
@@ -202,4 +202,4 @@ await notifier.removeNotificationId('meeting-1983', 'meetings'); // a single toa
 | `winNotify.initNotificationCallBack(...)` | `winNotify.setCallback(...)` |
 | `OnTapNotification` | `NotificationCallback` |
 
-Callback payload key names on the wire (`payload` JSON) also changed from `temolateType` → `templateType` and `largImage` → `largeImage`, so a 2.x app cannot decode a callback emitted by a 1.x native plugin and vice versa. In practice you upgrade both sides together.
+Callback payload JSON keys changed too (`temolateType` to `templateType`, `largImage` to `largeImage`), so 2.x Dart can't decode callbacks from the 1.x native plugin. Upgrade both sides together.

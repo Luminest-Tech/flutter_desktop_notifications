@@ -2,8 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Journal / ledger aesthetic. Parchment background, caramel ink sparkline
-/// that feels hand-drawn, sage trend chip.
 class StatsCard extends StatelessWidget {
   const StatsCard({super.key});
 
@@ -149,7 +147,6 @@ class _SparklinePainter extends CustomPainter {
         ..style = PaintingStyle.stroke,
     );
 
-    // Last-point dot with cream halo.
     final last = point(values.length - 1);
     canvas.drawCircle(
       last,

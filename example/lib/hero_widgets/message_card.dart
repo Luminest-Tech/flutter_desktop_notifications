@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Airy journal-style message preview: cream bg, serif name, terracotta avatar.
 class MessageCard extends StatelessWidget {
   const MessageCard({
     super.key,
     this.sender = 'Ada Lovelace',
-    this.preview = "Would love to grab lunch — are you around Thursday?",
+    this.preview = 'Would love to grab lunch, are you around Thursday?',
     this.timeAgo = 'just now',
   });
 

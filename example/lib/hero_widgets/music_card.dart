@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Vinyl / warm walnut aesthetic. Dark wood background, copper album tile with
-/// concentric-ring highlights, gold accents.
 class MusicCard extends StatelessWidget {
   const MusicCard({super.key});
 
@@ -125,7 +123,6 @@ class _RecordAlbum extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Subtle concentric rings like a vinyl record
           ...List.generate(3, (i) {
             final size = 48.0 + i * 20;
             return Container(

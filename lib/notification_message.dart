@@ -1,45 +1,29 @@
 import 'dart:convert';
 
-/// Why a notification was dismissed, or that it was activated.
-///
 /// See https://learn.microsoft.com/en-us/uwp/api/windows.ui.notifications.toastdismissalreason
 enum NotificationEvent {
-  /// The user clicked the toast body or an action button that uses foreground
-  /// or protocol activation.
   activated,
-
-  /// The app explicitly hid the toast by calling `ToastNotifier.Hide`.
   dismissedByApp,
-
-  /// The user closed the toast.
   dismissedByUser,
-
-  /// The toast timed out (7s normal, 25s long-duration).
   dismissedByTimeout,
 }
 
 enum TemplateType { plugin, custom }
 
-/// How an action button — or the toast body itself — activates the app.
 enum NotificationActivationType {
-  /// Opens the app in the foreground with the action's arguments.
   foreground,
-
-  /// Invokes a background task (packaged apps only).
   background,
-
-  /// Launches a protocol URI (e.g. `https://…` or `myapp://…`).
   protocol,
 }
 
-/// Toast scenario — drives sound, persistence, and special UI treatment.
+/// Toast scenario. Drives sound, persistence, and special UI treatment.
 ///
-/// - [defaultScenario]: standard toast, auto-dismisses after [NotificationDuration.short].
-/// - [reminder]: persistent until the user dismisses it, offers a snooze menu.
-/// - [alarm]: persistent, louder/looping sound, built-in Snooze/Dismiss buttons
-///   unless you supply your own `<action>` elements.
-/// - [incomingCall]: full-screen call UI on lock screen, looping ringtone.
-/// - [urgent]: bypasses Focus Assist (Windows 11+).
+/// * [defaultScenario]: standard toast.
+/// * [reminder]: persistent, adds a snooze menu.
+/// * [alarm]: persistent with looping sound and built-in Snooze/Dismiss
+///   unless you supply your own actions.
+/// * [incomingCall]: full-screen call UI on the lock screen.
+/// * [urgent]: bypasses Focus Assist (Windows 11+).
 enum NotificationScenario {
   defaultScenario,
   reminder,
@@ -50,8 +34,7 @@ enum NotificationScenario {
 
 enum NotificationDuration { short, long }
 
-/// Built-in text styles Windows renders for ToastGeneric bindings.
-/// See https://learn.microsoft.com/windows/apps/design/shell/tiles-and-notifications/adaptive-interactive-toasts
+/// https://learn.microsoft.com/windows/apps/design/shell/tiles-and-notifications/adaptive-interactive-toasts
 enum NotificationTextStyle {
   caption,
   captionSubtle,
@@ -74,18 +57,16 @@ enum NotificationTextStyle {
 
 enum NotificationTextAlignment { left, center, right }
 
-/// Visual emphasis for an action button.
 enum NotificationButtonStyle { success, critical }
 
-/// A selectable item inside a [NotificationInput.selection].
 class NotificationSelection {
   const NotificationSelection({required this.id, required this.content});
   final String id;
   final String content;
 }
 
-/// An input field shown inside a toast: either a free-form text box or a
-/// selection list. Associate with an action button via [NotificationAction.inputId].
+/// A text input or selection list shown inside a toast. Link to an action
+/// button with [NotificationAction.inputId] to get a send-reply pairing.
 class NotificationInput {
   const NotificationInput.text({
     required this.id,
@@ -111,8 +92,8 @@ class NotificationInput {
   final String? defaultSelectionId;
 }
 
-/// An action. Rendered as a button by default; pass [contextMenu] = true to
-/// put it under the toast's `…` overflow menu instead.
+/// Rendered as a button by default. Set [contextMenu] to put it under the
+/// toast's overflow menu instead.
 class NotificationAction {
   const NotificationAction({
     required this.content,
@@ -133,9 +114,6 @@ class NotificationAction {
   final bool contextMenu;
 }
 
-/// Structured text line in the toast body. A plain string works too
-/// (implicitly uses defaults), but use [NotificationText] when you need
-/// styling or alignment.
 class NotificationText {
   const NotificationText(
     this.content, {
@@ -149,12 +127,8 @@ class NotificationText {
   final int? maxLines;
 }
 
-/// Named system sounds. Supply to [NotificationAudio.sound]. For arbitrary
-/// audio files, construct with [NotificationAudio.custom].
-///
-/// Enum names intentionally mirror the ms-winsoundevent source names
-/// (`Notification.Default`, `Notification.IM`, etc.), so emission doesn't
-/// need a translation table.
+/// Names mirror the ms-winsoundevent source strings so emission can use
+/// `.name` directly.
 // ignore_for_file: constant_identifier_names
 enum NotificationSound {
   Default,
@@ -184,10 +158,8 @@ enum NotificationSound {
   Call10,
 }
 
-/// Audio behavior for the toast. [silent] suppresses any sound.
-/// [loop] keeps the sound playing for the duration of the toast — only valid
-/// for Alarm/Call family sounds and requires a long-duration toast or a
-/// scenario like `alarm` / `incomingCall`.
+/// [loop] only works for Alarm / Call sounds, and only with a long-duration
+/// toast or an alarm/incomingCall scenario.
 class NotificationAudio {
   const NotificationAudio({
     this.sound,
@@ -195,15 +167,12 @@ class NotificationAudio {
     this.loop = false,
   }) : _custom = null;
 
-  /// Silent toast — no sound at all.
   const NotificationAudio.silent()
       : sound = null,
         silent = true,
         loop = false,
         _custom = null;
 
-  /// Use a custom ms-winsoundevent or file-URI source. Rarely needed; prefer
-  /// [NotificationAudio.new] with [NotificationSound].
   const NotificationAudio.custom(String source, {this.loop = false})
       : sound = null,
         silent = false,
@@ -221,9 +190,7 @@ class NotificationAudio {
   }
 }
 
-/// A progress bar rendered below the text of the toast.
-///
-/// [value] must be in `[0.0, 1.0]` or `null` for indeterminate.
+/// [value] is `null` for indeterminate, otherwise clamped to `[0.0, 1.0]`.
 class NotificationProgress {
   const NotificationProgress({
     this.title,
@@ -233,24 +200,15 @@ class NotificationProgress {
   });
 
   final String? title;
-
-  /// `null` → indeterminate; otherwise clamped to `[0.0, 1.0]`.
   final double? value;
 
-  /// Text shown in place of the default `35%` readout — e.g. `"12 of 34"`.
+  /// Replaces the default `35%` readout. e.g. `'12 of 34'`.
   final String? valueStringOverride;
 
-  /// Small line of text below the progress bar (e.g. `"Uploading…"`).
   final String status;
 }
 
 class NotificationMessage {
-  /// Build a toast from the plugin's built-in template.
-  ///
-  /// [title] and [body] populate the two primary text lines. Everything else
-  /// is optional. See [NotificationAction] / [NotificationInput] for buttons
-  /// and reply boxes; [NotificationAudio] / [NotificationProgress] /
-  /// [NotificationScenario] etc. for the richer features.
   NotificationMessage.fromPluginTemplate(
     this.id,
     String this.title,
@@ -345,15 +303,11 @@ class NotificationMessage {
   final NotificationScenario? scenario;
   final NotificationDuration? duration;
 
-  /// Controls how clicking the toast body itself activates the app.
-  ///
-  /// Defaults to [NotificationActivationType.foreground] for plugin
-  /// templates — clicking fires an `activated` event with [launch] as the
-  /// arguments string. Set to [NotificationActivationType.protocol] when
-  /// [launch] is a URL you want Windows to open.
+  /// Activation for clicks on the toast body itself. Defaults to
+  /// [NotificationActivationType.foreground]; set to `protocol` when [launch]
+  /// is a URL you want Windows to open.
   final NotificationActivationType? activationType;
 
-  /// If set, overrides the "when" timestamp shown in the Action Center.
   final DateTime? displayTimestamp;
 
   Map<String, dynamic> toPayloadMap() => {
@@ -389,8 +343,8 @@ class NotificationCallbackDetails {
   final NotificationEvent event;
   final NotificationMessage message;
 
-  /// `arguments` attribute from the activated `<action>`, or the toast's
-  /// `launch` value if the body itself was tapped. Null for dismissal events.
+  /// `arguments` from the activated `<action>`, or the toast's `launch`
+  /// value for body taps. Null on dismissal events.
   final String? arguments;
 
   final Map<String, String> userInput;

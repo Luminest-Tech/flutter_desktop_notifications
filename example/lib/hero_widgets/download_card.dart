@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Cozy library-shelf vibe: sage + caramel on cream.
 class DownloadCard extends StatelessWidget {
   const DownloadCard({super.key});
 

@@ -7,9 +7,6 @@ import 'notification_message.dart';
 import 'src/toast_xml.dart';
 import 'windows_notification_platform_interface.dart';
 
-/// Method-channel implementation of [WindowsNotificationPlatform]. All toast
-/// XML is composed on the Dart side and sent to the Windows plugin via a
-/// single `show_toast` method call.
 class MethodChannelWindowsNotification extends WindowsNotificationPlatform {
   @visibleForTesting
   final MethodChannel methodChannel = const MethodChannel('windows_notification');

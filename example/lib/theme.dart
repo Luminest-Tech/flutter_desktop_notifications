@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Warm palette — morning cream in light mode, walnut/espresso at night.
-/// Exposed as a [ThemeExtension] so widgets pull hand-tuned accents from
-/// `Theme.of(context).extension<AppPalette>()!` (or the `context.palette`
-/// convenience extension defined at the bottom of this file).
+/// Exposed through [context.palette].
 @immutable
 class AppPalette extends ThemeExtension<AppPalette> {
   const AppPalette({
@@ -36,24 +33,12 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color textSecondary;
   final Color textTertiary;
 
-  /// Warm copper/brown.
   final Color caramel;
-
-  /// Muted olive-green.
   final Color sage;
-
-  /// Warm red-orange clay.
   final Color terracotta;
-
-  /// Deep espresso, near-black.
   final Color ink;
-
-  /// Creamy off-white.
   final Color cream;
-
-  /// Burgundy — for accents on calendar-style elements.
   final Color wine;
-
   final Color softShadow;
 
   static const light = AppPalette(
@@ -156,9 +141,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
   }
 }
 
-/// Warm serif for display copy, default sans for body. Georgia is preinstalled
-/// on Windows / macOS; on bare Linux it falls back to whatever serif the
-/// system has, which still reads as "editorial".
+// Georgia ships with Windows and macOS; on Linux the system falls back to
+// another serif.
 const _displayFont = 'Georgia';
 
 TextTheme _textTheme(AppPalette p) => TextTheme(

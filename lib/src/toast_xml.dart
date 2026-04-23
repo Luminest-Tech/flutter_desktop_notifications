@@ -38,11 +38,9 @@ String _textTag(NotificationText t) {
   return '$open${_escapeXml(t.content)}</text>';
 }
 
-/// Builds the full toast XML for a plugin-template [message].
 String buildPluginTemplateXml(NotificationMessage message) {
   final sb = StringBuffer('<?xml version="1.0" encoding="utf-8"?>\n');
 
-  // <toast …>
   final activation =
       message.activationType ?? NotificationActivationType.foreground;
   sb.write('<toast activationType="${activation.name}"');
@@ -61,7 +59,6 @@ String buildPluginTemplateXml(NotificationMessage message) {
   if (anyStyled) sb.write(' useButtonStyle="true"');
   sb.write('>\n');
 
-  // <visual>
   sb.write('  <visual>\n');
   sb.write('    <binding template="ToastGeneric">\n');
   if (message.heroImage != null) {
@@ -108,7 +105,6 @@ String buildPluginTemplateXml(NotificationMessage message) {
   sb.write('    </binding>\n');
   sb.write('  </visual>\n');
 
-  // <audio>
   if (message.audio != null) {
     final a = message.audio!;
     if (a.silent) {
@@ -120,7 +116,6 @@ String buildPluginTemplateXml(NotificationMessage message) {
     }
   }
 
-  // <actions>
   if (message.actions.isNotEmpty || message.inputs.isNotEmpty) {
     sb.write('  <actions>\n');
     for (final input in message.inputs) {

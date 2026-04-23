@@ -5,38 +5,24 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-/// Renders a Flutter widget to a PNG off-screen — no need to mount it in
-/// your UI first. Pair with [NotificationMessage.fromPluginTemplate]'s
-/// `heroImage` field to put live-generated content in a toast.
-///
-/// Usage:
+/// Renders a Flutter widget to a PNG off-screen. Pair with a
+/// `NotificationMessage.fromPluginTemplate`'s `heroImage` to put
+/// live-generated content in a toast.
 ///
 /// ```dart
 /// final path = await WidgetToImage.toPngFile(
 ///   widget: MyRichToastCard(user: user),
 ///   size: const Size(364, 180),
 /// );
-/// await notifier.showNotificationPluginTemplate(
-///   NotificationMessage.fromPluginTemplate(
-///     'rich', 'Title', 'Body',
-///     heroImage: path,
-///   ),
-/// );
 /// ```
 ///
-/// Windows toast hero images are sized 364 x 180 DIPs (≈ 3:1.47). Anything
-/// taller/wider gets scaled. For crisp output on high-DPI displays pass a
-/// higher [pixelRatio] (the PNG itself becomes larger, but Windows scales
-/// down cleanly).
+/// Toast hero images are sized 364 x 180 DIPs. For crisp output on high-DPI
+/// displays, pass a higher [pixelRatio].
 class WidgetToImage {
   WidgetToImage._();
 
-  /// Render [widget] at [size] logical pixels and return the raw PNG bytes.
-  ///
-  /// [pixelRatio] scales the output bitmap — 2.0 gives a 2× PNG.
-  /// [waitBeforeCapture] is useful when the widget kicks off an image load or
-  /// other async work; Flutter can't otherwise tell us "the paint is stable".
-  /// [theme] optionally wraps the widget in `Theme` for Material styling.
+  /// [waitBeforeCapture] gives async work in the widget (network images,
+  /// etc.) a chance to land before capture.
   static Future<Uint8List> toPng({
     required Widget widget,
     required Size size,
@@ -115,11 +101,8 @@ class WidgetToImage {
     }
   }
 
-  /// Render [widget] and write it to disk. Returns the file path.
-  ///
-  /// [filePath] is where the PNG lands. If null, writes to a plugin-owned
-  /// temp directory under the OS temp root and returns that path — callers
-  /// are responsible for cleanup (stale files accumulate across runs).
+  /// [filePath] is where to write the PNG. If null, writes under the OS
+  /// temp root; stale files accumulate until cleaned up by the caller.
   static Future<String> toPngFile({
     required Widget widget,
     required Size size,

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Aged-paper calendar with a wine-red date stamp. Serif headings, warm
-/// ivory surround.
 class CalendarCard extends StatelessWidget {
   const CalendarCard({super.key});
 
@@ -120,7 +118,7 @@ class CalendarCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
-                _Meta(icon: Icons.access_time_rounded, text: '10:30 — 11:00 AM'),
+                _Meta(icon: Icons.access_time_rounded, text: '10:30 to 11:00 AM'),
                 const SizedBox(height: 4),
                 _Meta(
                     icon: Icons.place_outlined,

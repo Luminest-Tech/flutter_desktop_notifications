@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Sunrise palette. Warm peach/rose gradient, simple 5-day strip along the
-/// bottom.
 class WeatherCard extends StatelessWidget {
   const WeatherCard({super.key});
 

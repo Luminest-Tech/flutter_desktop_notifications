@@ -27,8 +27,8 @@ using flutter::EncodableValue;
 
 namespace {
 
-// Fetch a required string from `args`, or return `fallback` if the key is
-// missing / not a string. Prevents std::bad_variant_access on unexpected
+// Safe string fetch: returns `fallback` if the key is missing or the value
+// isn't a string. Without this, std::get<std::string> throws on malformed
 // Dart-side shapes.
 std::string GetString(const EncodableMap& args, const char* key,
                       std::string fallback = "") {
@@ -46,7 +46,7 @@ std::optional<std::string> GetOptionalString(const EncodableMap& args,
   return std::nullopt;
 }
 
-// Windows filename reserved chars, mapped to '_'.
+// Replace reserved Windows filename chars with '_'.
 std::wstring SanitizeShortcutName(std::wstring s) {
   for (auto& c : s) {
     switch (c) {
@@ -178,8 +178,8 @@ void WindowsNotificationPlugin::ShowToast(const EncodableMap& args) {
     notif.Group(winrt::to_hstring(*group));
   }
 
-  // Event handlers MUST be attached before Show(); otherwise fast
-  // activations/dismissals can fire before we wire up.
+  // Handlers must be attached before Show() or fast user interaction can
+  // fire before we wire up.
   notif.Activated({this, &WindowsNotificationPlugin::OnActivate});
   notif.Dismissed({this, &WindowsNotificationPlugin::OnDismissed});
 
@@ -259,7 +259,6 @@ void WindowsNotificationPlugin::RegisterAumid(const EncodableMap& args) {
     const winrt::hstring icon_path = winrt::to_hstring(*icon_path_utf8);
     winrt::check_hresult(shell_link->SetIconLocation(icon_path.c_str(), 0));
   } else {
-    // Fall back to the icon embedded in the running exe.
     winrt::check_hresult(shell_link->SetIconLocation(exe_path, 0));
   }
 
@@ -290,9 +289,8 @@ void WindowsNotificationPlugin::BringToForeground() {
   } else {
     ::ShowWindow(host_window_, SW_SHOW);
   }
-  // SetForegroundWindow is best-effort; Windows may refuse if the calling
-  // process doesn't own the foreground focus. The ShowWindow call above at
-  // least un-minimizes in that case.
+  // Best-effort; Windows may refuse foreground switches when the calling
+  // process doesn't own focus. ShowWindow above at least un-minimizes.
   ::SetForegroundWindow(host_window_);
 }
 
@@ -364,13 +362,13 @@ void WindowsNotificationPlugin::PostEventToMainThread(
     std::string method_name, EncodableValue args) {
   if (host_window_ == nullptr) {
     CacheHostWindow();
-    if (host_window_ == nullptr) return;  // nowhere to post; drop the event
+    if (host_window_ == nullptr) return;
   }
   const flutter::MethodCall<EncodableValue> call(
       std::move(method_name), std::make_unique<EncodableValue>(std::move(args)));
   auto encoded = codec_->EncodeMethodCall(call);
-  // Ownership of the buffer is transferred to the Windows message queue; the
-  // handler on the main thread re-wraps it in a unique_ptr to free it.
+  // Buffer ownership passes to the Windows message queue; the handler on
+  // the UI thread re-wraps in unique_ptr to free.
   auto* raw = encoded.release();
   if (!::PostMessage(host_window_, kNotificationThreadMessageId, 0,
                      reinterpret_cast<LPARAM>(raw))) {

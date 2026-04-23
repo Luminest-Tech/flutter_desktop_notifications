@@ -63,8 +63,8 @@ class WindowsNotificationPlugin : public flutter::Plugin {
   HWND host_window_ = nullptr;
   int proc_id_ = -1;
 
-  // Custom WM_USER-range message used to marshal toast events back to the
-  // Flutter UI thread. Arbitrary value; only this plugin listens for it.
+  // WM_USER-range message for marshaling toast events from WinRT threads
+  // onto the UI thread. Value is arbitrary; only this plugin listens for it.
   static constexpr UINT kNotificationThreadMessageId = 0x8000 + 0x5A5A;
 };
 
