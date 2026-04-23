@@ -1,3 +1,24 @@
+## 2.1.0 (unreleased)
+
+### New
+
+- Rich notification content is now first-class on `NotificationMessage.fromPluginTemplate`:
+  - `scenario` (`defaultScenario` / `reminder` / `alarm` / `incomingCall` / `urgent`) and `duration` (`short` / `long`).
+  - `heroImage` — the big banner image at the top of a toast, separate from the small `image` (appLogoOverride).
+  - `attribution` — the dim source/sender line at the bottom of the toast body.
+  - `extraTexts: List<NotificationText>` — additional styled body lines with `hint-style`, `hint-align`, `hint-maxLines`.
+  - `audio: NotificationAudio` — silent / named system sound / looping via the `NotificationSound` enum (Default, IM, Mail, Reminder, SMS, Alarm, Alarm2–10, Call, Call2–10) or a custom source URI.
+  - `progress: NotificationProgress` — title, value (or `null` for indeterminate), `valueStringOverride`, status text.
+  - `contextMenu: true` on a `NotificationAction` renders it in the toast's `…` overflow menu instead of as a button.
+  - `displayTimestamp` — override the "when" shown in the Action Center.
+  - `activationType` — controls the *toast body's* activation (foreground / background / protocol). Defaults to `foreground` (BREAKING relative to 2.0.0's hardcoded `protocol`); opt in to `protocol` when you want Windows to open a URL from `launch`.
+- `WidgetToImage.toPng(widget, size)` / `WidgetToImage.toPngFile(widget, size)` render any Flutter widget off-screen to a PNG — useful for dropping live-generated content into `heroImage`. Uses a detached `BuildOwner` / `PipelineOwner` pipeline, no need to mount the widget first.
+- `WindowsNotification.bringAppToForeground()` — raises and un-minimizes the current window. Intended for use from a notification callback so your "Open" action button can surface the already-running app.
+
+### Breaking (since 2.0.0 was not published)
+
+- Toast-body default activation changed from `protocol` to `foreground`. Apps that set `launch` to a URL (e.g. `"https://…"`) expecting Windows to open it on body-tap must now also set `activationType: NotificationActivationType.protocol`. The wikipedia example in the example app shows the pattern.
+
 ## 2.0.0
 
 Full modernization. Most of the public API was renamed; existing 1.x code will not compile unchanged.
