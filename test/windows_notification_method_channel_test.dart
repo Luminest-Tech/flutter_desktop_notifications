@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:windows_notification/windows_notification.dart';
-import 'package:windows_notification/windows_notification_method_channel.dart';
+import 'package:flutter_windows_notification/flutter_windows_notification.dart';
+import 'package:flutter_windows_notification/windows_notification_method_channel.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

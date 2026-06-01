@@ -1,30 +1,51 @@
-# windows_notification
+# flutter_windows_notification
 
-Send native Windows toast notifications from Flutter.
+Send native Windows toast notifications from Flutter. Build a toast from a
+structured template or ship raw toast XML, attach buttons and reply boxes, get
+callbacks when the user clicks or dismisses, and pull notifications back out of
+the Action Center.
 
-Supports:
+Windows only. Pair it with `flutter_local_notifications` if you also need
+Android or iOS.
 
-- Built-in templates with title, body, small image (circle-cropped `appLogoOverride`), and large hero image.
-- Fully custom toast XML for anything the built-ins don't cover.
-- Structured action buttons and input fields (text or selection). No hand-written XML needed for reply boxes or snooze lists.
-- Activation and dismissal callbacks with the original message, action arguments, and user input values.
-- Removing notifications from the Action Center by id, by group, or all at once.
+This is a fork and rewrite of
+[`windows_notification`](https://pub.dev/packages/windows_notification) by
+mrtnetwork. The public API was reworked, the native side hardened, and a few
+features added (rich content, a widget-to-image hero renderer, and a Start Menu
+AUMID helper for unpackaged apps).
 
-Windows-only. Pair with `flutter_local_notifications` if you also need Android or iOS.
+## What you can send
 
-## Getting started
+- Built-in templates with a title, body, a small circle-cropped logo, and a
+  large hero image.
+- Action buttons and input fields (text or selection) without hand-writing XML.
+- Scenarios (reminder, alarm, incoming call, urgent), system or looping sounds,
+  progress bars, attribution lines, and extra styled text lines.
+- Any Flutter widget, rasterized off-screen and used as the hero image.
+- Fully custom toast XML when the built-ins do not cover something.
+- Activation and dismissal callbacks carrying the original message, the action
+  arguments, and any typed input.
+- Removal of delivered toasts by id, by group, or all at once.
+
+## Install
 
 ```yaml
 dependencies:
-  windows_notification: ^2.0.0
+  flutter_windows_notification: ^1.0.0
 ```
 
-### Registering an Application User Model ID (AUMID)
+```dart
+import 'package:flutter_windows_notification/flutter_windows_notification.dart';
+```
 
-Windows will not show a toast whose AUMID isn't registered. The AUMID is also what the OS uses to look up the sender's name and icon.
+## Registering an Application User Model ID (AUMID)
 
-- **Packaged (MSIX) apps**: the manifest supplies the AUMID. Leave `applicationId` null.
-- **Unpackaged apps**: use the built-in helper once on startup.
+Windows will not show a toast whose AUMID is not registered. The AUMID is also
+what the OS uses to look up the sender's name and icon.
+
+- **Packaged (MSIX) apps**: the manifest supplies the AUMID. Leave
+  `applicationId` null.
+- **Unpackaged apps**: call the built-in helper once on startup.
 
 ```dart
 Future<void> main() async {
@@ -32,7 +53,7 @@ Future<void> main() async {
   await WindowsNotification.registerAumid(
     aumid: 'com.example.myapp',
     displayName: 'My App',
-    // iconPath: 'C:\\path\\to\\custom.ico',  // optional; defaults to the exe's embedded icon
+    // iconPath: r'C:\path\to\custom.ico', // optional; defaults to the exe icon
   );
   runApp(const MyApp());
 }
@@ -40,28 +61,33 @@ Future<void> main() async {
 final notifier = WindowsNotification(applicationId: 'com.example.myapp');
 ```
 
-`registerAumid` writes (or refreshes) a Start Menu shortcut at `%APPDATA%\Microsoft\Windows\Start Menu\Programs\{displayName}.lnk` that points at the running executable and has `System.AppUserModel.ID` set to the AUMID. The call is idempotent, so it's safe to run on every launch. Uninstallers should delete that `.lnk` to clean up.
+`registerAumid` writes (or refreshes) a Start Menu shortcut at
+`%APPDATA%\Microsoft\Windows\Start Menu\Programs\{displayName}.lnk` that points
+at the running executable and carries `System.AppUserModel.ID`. The call is
+idempotent, so it is safe to run on every launch. Uninstallers should delete
+that `.lnk`.
 
-Microsoft recommends AUMIDs in the form `CompanyName.ProductName.SubProduct.VersionInformation`. The helper enforces the hard limits (non-empty, 129 characters or fewer, no whitespace).
+Microsoft recommends AUMIDs shaped like
+`CompanyName.ProductName.SubProduct.VersionInformation`. The helper enforces the
+hard limits: non-empty, 129 characters or fewer, no whitespace.
 
-Caveats:
-
-- `registerAumid` only sets up enough for Windows to display toasts under your branding. Action-button clicks that need to cold-launch a closed app require a COM server registered against the AUMID, which is out of scope here.
-- If you move or rename your exe, call `registerAumid` again so the shortcut points at the new location.
+A couple of caveats. `registerAumid` sets up enough for Windows to show toasts
+under your branding, but action buttons that need to cold-launch a closed app
+still require a COM server registered against the AUMID, which is out of scope
+here. And if you move or rename the exe, call it again so the shortcut points at
+the new location.
 
 ## Basic use
 
 ```dart
-import 'package:windows_notification/windows_notification.dart';
-
 final notifier = WindowsNotification(applicationId: 'com.example.myapp');
 
 await notifier.setCallback((details) {
   switch (details.event) {
     case NotificationEvent.activated:
-      // details.arguments: `arguments` from the activated <action>, or the
-      //                    <toast>'s `launch` attribute.
-      // details.userInput: { inputId: value } from <input> elements.
+      // details.arguments: the activated action's `arguments`, or the toast's
+      //                    `launch` value for a body tap.
+      // details.userInput: { inputId: value } from any input fields.
       // details.message:   the original NotificationMessage.
       break;
     case NotificationEvent.dismissedByUser:
@@ -82,7 +108,7 @@ await notifier.showNotificationPluginTemplate(
 
 ## Action buttons and inputs
 
-Attach buttons and input fields directly to a built-in template:
+Attach buttons and a reply box straight to a built-in template:
 
 ```dart
 await notifier.showNotificationPluginTemplate(
@@ -109,9 +135,9 @@ await notifier.showNotificationPluginTemplate(
 );
 ```
 
-In your callback, the user's typed text is at `details.userInput['reply']`.
+In the callback, the typed text is at `details.userInput['reply']`.
 
-Selection inputs:
+Selection inputs work the same way:
 
 ```dart
 NotificationInput.selection(
@@ -126,32 +152,57 @@ NotificationInput.selection(
 );
 ```
 
-## Launch strings and images
+## Images and links
 
 ```dart
 NotificationMessage.fromPluginTemplate(
   'open-wiki',
   'Wikipedia',
   'Tap to open the article.',
-  image: '/path/to/avatar.png',        // small circle-cropped logo
-  largeImage: '/path/to/hero.png',     // big image below the text
-  launch: 'https://en.wikipedia.org/', // opens in the default browser (protocol activation)
+  image: r'C:\path\to\avatar.png',      // small circle-cropped logo
+  largeImage: r'C:\path\to\hero.png',   // big image below the text
+  launch: 'https://en.wikipedia.org/',  // opens in the default browser
+  activationType: NotificationActivationType.protocol,
 );
 ```
 
-For in-app deep links that don't go through a URI scheme, use `fromCustomTemplate` with `<toast activationType="foreground" launch="...">` and read `details.arguments` / `details.message.payload` in your callback.
+The toast body's own activation defaults to `foreground`. Set it to `protocol`
+when `launch` is a URL you want Windows to open on a body tap.
+
+## Hero image from a Flutter widget
+
+`WidgetToImage` renders any widget off-screen to a PNG, so you can put
+live-generated content in a toast without mounting the widget first. Toast hero
+images are 364 x 180; pass a higher `pixelRatio` for crisp output.
+
+```dart
+final path = await WidgetToImage.toPngFile(
+  widget: NowPlayingCard(track: track),
+  size: const Size(364, 180),
+  pixelRatio: 2.0,
+);
+
+await notifier.showNotificationPluginTemplate(
+  NotificationMessage.fromPluginTemplate(
+    'now-playing',
+    'Now playing',
+    'Neil Young · Harvest Moon',
+    heroImage: path,
+  ),
+);
+```
 
 ## Custom XML
 
-When the built-ins aren't enough, ship raw toast XML:
+When the built-ins are not enough, send raw toast XML:
 
 ```dart
 const template = '''
-<toast scenario="reminder" launch="open=event&id=1983">
+<toast scenario="reminder" launch="open=event&amp;id=1983">
   <visual>
     <binding template="ToastGeneric">
-      <text>Adaptive Tiles Meeting</text>
-      <text>Conf Room 2001 / Building 135</text>
+      <text>Design review</text>
+      <text>Room 2001 / Building 135</text>
       <text>10:00 AM - 10:30 AM</text>
     </binding>
   </visual>
@@ -173,33 +224,23 @@ await notifier.showNotificationCustomTemplate(
 );
 ```
 
-See the [toast XML schema reference](https://learn.microsoft.com/windows/apps/design/shell/tiles-and-notifications/toast-xml-schema) for every supported element.
+The [toast XML schema reference](https://learn.microsoft.com/windows/apps/design/shell/tiles-and-notifications/toast-xml-schema)
+lists every supported element.
 
 ## Removing notifications
 
 ```dart
-await notifier.clearNotificationHistory();             // everything from this app
-await notifier.removeNotificationGroup('meetings');    // all in a group
+await notifier.clearNotificationHistory();              // everything from this app
+await notifier.removeNotificationGroup('meetings');     // all in a group
 await notifier.removeNotificationId('meeting-1983', 'meetings'); // a single toast
 ```
 
-## Migration from 1.x
+## Example
 
-2.0 is a breaking release. The public API was renamed to fix long-standing typos, and a structured builder for actions/inputs replaces hand-written XML for the common cases.
+A full demo lives in `example/`. It has an accent and light/dark switcher and a
+button for every kind of toast, including the widget-to-hero-image renderer.
 
-| 1.x | 2.0 |
-| --- | --- |
-| `EventType` | `NotificationEvent` |
-| `EventType.onActivate` | `NotificationEvent.activated` |
-| `EventType.onDismissedUserCanceled` | `NotificationEvent.dismissedByUser` |
-| `EventType.onDismissedApplicationHidden` | `NotificationEvent.dismissedByApp` |
-| `EventType.onDismissedTimedOut` | `NotificationEvent.dismissedByTimeout` |
-| `NotificationCallBackDetails` | `NotificationCallbackDetails` |
-| `details.eventType` | `details.event` |
-| `details.argrument` | `details.arguments` |
-| `NotificationMessage.temolateType` | `NotificationMessage.templateType` |
-| `NotificationMessage.largImage` *(field name)* | `NotificationMessage.largeImage` |
-| `winNotify.initNotificationCallBack(...)` | `winNotify.setCallback(...)` |
-| `OnTapNotification` | `NotificationCallback` |
-
-Callback payload JSON keys changed too (`temolateType` to `templateType`, `largImage` to `largeImage`), so 2.x Dart can't decode callbacks from the 1.x native plugin. Upgrade both sides together.
+```bash
+cd example
+flutter run -d windows
+```
