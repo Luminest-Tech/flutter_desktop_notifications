@@ -33,8 +33,7 @@ class WidgetToImage {
     WidgetsFlutterBinding.ensureInitialized();
 
     final repaintBoundary = RenderRepaintBoundary();
-    final flutterView =
-        WidgetsBinding.instance.platformDispatcher.views.first;
+    final flutterView = WidgetsBinding.instance.platformDispatcher.views.first;
     final renderView = RenderView(
       view: flutterView,
       configuration: ViewConfiguration(

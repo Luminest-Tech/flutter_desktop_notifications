@@ -4,6 +4,15 @@ import 'windows_notification_platform_interface.dart';
 export 'notification_message.dart';
 export 'widget_to_image.dart';
 
+// Cross-platform unified API.
+export 'src/desktop/desktop_notifier.dart';
+export 'src/desktop/desktop_notifications_platform.dart';
+// Platform implementations. Exported so the generated plugin registrant can
+// resolve each `dartPluginClass` from the package's main library.
+export 'src/desktop/windows_desktop.dart';
+export 'src/desktop/macos_desktop.dart';
+export 'src/desktop/linux_desktop.dart';
+
 /// ```dart
 /// final notifier = WindowsNotification(applicationId: 'com.example.app');
 /// await notifier.setCallback((details) { ... });
@@ -92,8 +101,7 @@ class WindowsNotification {
           aumid, 'aumid', 'must be 129 characters or fewer');
     }
     if (aumid.contains(' ')) {
-      throw ArgumentError.value(
-          aumid, 'aumid', 'must not contain whitespace');
+      throw ArgumentError.value(aumid, 'aumid', 'must not contain whitespace');
     }
     if (displayName.trim().isEmpty) {
       throw ArgumentError.value(

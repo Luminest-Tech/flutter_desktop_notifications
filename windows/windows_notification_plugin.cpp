@@ -201,6 +201,19 @@ void WindowsNotificationPlugin::ClearHistory(const EncodableMap& args) {
 void WindowsNotificationPlugin::RemoveNotification(const EncodableMap& args) {
   const std::string tag = GetString(args, "tag");
   const std::string group = GetString(args, "group");
+  // With no group only a tag-targeted removal is available; passing an empty
+  // group string to the (tag, group[, application_id]) overloads throws. This
+  // path is used by the unified DesktopNotifier's cancel(id) without a group.
+  // Single-cancel is best-effort: a tag that isn't in the default history
+  // (already gone, or shown under a custom AUMID) is not an error.
+  if (group.empty()) {
+    try {
+      toast_manager_.History().Remove(winrt::to_hstring(tag));
+    } catch (const winrt::hresult_error&) {
+      // Ignore: nothing to remove.
+    }
+    return;
+  }
   if (auto app_id = GetOptionalString(args, "application_id")) {
     toast_manager_.History().Remove(winrt::to_hstring(tag),
                                     winrt::to_hstring(group),

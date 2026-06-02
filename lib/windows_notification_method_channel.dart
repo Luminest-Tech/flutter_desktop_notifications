@@ -9,7 +9,8 @@ import 'windows_notification_platform_interface.dart';
 
 class MethodChannelWindowsNotification extends WindowsNotificationPlatform {
   @visibleForTesting
-  final MethodChannel methodChannel = const MethodChannel('windows_notification');
+  final MethodChannel methodChannel =
+      const MethodChannel('windows_notification');
 
   NotificationCallback? _callback;
   bool _handlerAttached = false;

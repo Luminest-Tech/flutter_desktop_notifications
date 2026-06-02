@@ -190,8 +190,7 @@ void main() {
 
   group('NotificationMessage', () {
     test('fromPluginTemplate asserts non-empty id', () {
-      expect(
-          () => NotificationMessage.fromPluginTemplate('', 'title', 'body'),
+      expect(() => NotificationMessage.fromPluginTemplate('', 'title', 'body'),
           throwsA(isA<AssertionError>()));
     });
 

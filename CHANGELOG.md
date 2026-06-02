@@ -1,3 +1,23 @@
+## 1.1.0
+
+Cross-platform release. macOS and Linux now have working backends.
+
+- New unified `DesktopNotifier` API that runs on Windows, macOS, and Linux. It
+  covers the common subset: title, body, image, action buttons, a reply field
+  (Windows and macOS), urgency, and activation/dismissal callbacks. Build
+  messages with the existing `NotificationMessage`; each platform renders what
+  it supports.
+- macOS backend on `UNUserNotificationCenter` (request permission, buttons,
+  text reply, image attachments, threads, interruption levels). Delivery
+  requires a code-signed app.
+- Linux backend on the freedesktop D-Bus spec via `desktop_notifications`. Pure
+  Dart, no native code. Buttons and click/close callbacks; urgency hints.
+- `DesktopNotifier.cancel(id)` and `cancelAll()` across all platforms. On
+  Windows, single-cancel without a group is now best-effort instead of throwing.
+- The example app gains a cross-platform row alongside the Windows-only extras.
+
+`WindowsNotification` and its full WinRT feature set are unchanged.
+
 ## 1.0.0
 
 First release of `flutter_desktop_notifications`, a fork and rewrite of

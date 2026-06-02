@@ -87,13 +87,11 @@ String buildPluginTemplateXml(NotificationMessage message) {
     if (p.title != null) {
       sb.write(' title="${_escapeXml(p.title!)}"');
     }
-    final progressValue = p.value == null
-        ? 'indeterminate'
-        : p.value!.clamp(0.0, 1.0).toString();
+    final progressValue =
+        p.value == null ? 'indeterminate' : p.value!.clamp(0.0, 1.0).toString();
     sb.write(' value="$progressValue"');
     if (p.valueStringOverride != null) {
-      sb.write(
-          ' valueStringOverride="${_escapeXml(p.valueStringOverride!)}"');
+      sb.write(' valueStringOverride="${_escapeXml(p.valueStringOverride!)}"');
     }
     sb.write(' status="${_escapeXml(p.status)}"');
     sb.write('/>\n');

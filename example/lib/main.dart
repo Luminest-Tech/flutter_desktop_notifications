@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -9,11 +10,14 @@ const _heroSize = Size(364, 180);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Unpackaged apps need a registered AUMID or Windows drops the toast.
-  await WindowsNotification.registerAumid(
-    aumid: _aumid,
-    displayName: _displayName,
-  );
+  // Unpackaged Windows apps need a registered AUMID or Windows drops the toast.
+  // No-op on macOS and Linux, where the API isn't available.
+  if (Platform.isWindows) {
+    await WindowsNotification.registerAumid(
+      aumid: _aumid,
+      displayName: _displayName,
+    );
+  }
   runApp(const ExampleApp());
 }
 
@@ -87,13 +91,19 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Windows-only rich API (scenarios, audio, progress, custom XML, hero images).
   final _notifier = WindowsNotification(applicationId: _aumid);
-  String _status = 'No event yet — fire a toast above, then click it.';
+  // Cross-platform API (Windows, macOS, Linux).
+  final _desktop = DesktopNotifier(appName: _displayName, appId: _aumid);
+  String _status = 'No event yet — fire a notification above, then click it.';
 
   @override
   void initState() {
     super.initState();
-    _notifier.setCallback(_onEvent);
+    // On Windows both notifiers share the same native callback channel, so one
+    // handler covers everything.
+    _desktop.requestPermission();
+    _desktop.setCallback(_onEvent);
   }
 
   void _onEvent(NotificationCallbackDetails details) {
@@ -126,6 +136,61 @@ class _HomePageState extends State<HomePage> {
       if (mounted) setState(() => _status = 'Error: $e');
     }
   }
+
+  // ---- Cross-platform (DesktopNotifier): Windows, macOS, Linux ----
+
+  Future<void> _xSimple() => _run(
+        'Fired a cross-platform notification.',
+        () => _desktop.show(
+          NotificationMessage.fromPluginTemplate(
+            'x-simple',
+            'Build complete',
+            'Works the same on Windows, macOS, and Linux.',
+          ),
+        ),
+      );
+
+  Future<void> _xButtons() => _run(
+        'Fired a notification with action buttons.',
+        () => _desktop.show(
+          NotificationMessage.fromPluginTemplate(
+            'x-buttons',
+            'Update available',
+            'Version 2.0 is ready to install.',
+            actions: const [
+              NotificationAction(
+                  content: 'Install', arguments: 'action:install'),
+              NotificationAction(content: 'Later', arguments: 'action:later'),
+            ],
+          ),
+        ),
+      );
+
+  Future<void> _xReply() => _run(
+        'Fired a notification with a reply field (Windows and macOS).',
+        () => _desktop.show(
+          NotificationMessage.fromPluginTemplate(
+            'x-reply',
+            'Ada Lovelace',
+            'Want to grab lunch at 12:30?',
+            inputs: const [
+              NotificationInput.text(id: 'reply', placeholder: 'Reply…'),
+            ],
+            actions: const [
+              NotificationAction(
+                content: 'Reply',
+                arguments: 'action:reply',
+                inputId: 'reply',
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Future<void> _xCancelAll() =>
+      _run('Cleared delivered notifications.', _desktop.cancelAll);
+
+  // ---- Windows-only (WindowsNotification) ----
 
   Future<void> _simpleToast() => _run(
         'Fired the Simple toast — title and body only.',
@@ -314,11 +379,6 @@ class _HomePageState extends State<HomePage> {
         },
       );
 
-  Future<void> _clearHistory() => _run(
-        "Cleared this app's notification history.",
-        _notifier.clearNotificationHistory,
-      );
-
   Future<void> _removeGroup() => _run(
         'Removed the "demos" group from the Action Center.',
         () => _notifier.removeNotificationGroup('demos'),
@@ -431,7 +491,7 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 2),
               Text(
-                'Native Windows toast notifications, sent straight from Flutter.',
+                'Native desktop notifications for Windows, macOS, and Linux.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
@@ -508,98 +568,153 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Send a notification',
+        Text('Cross-platform',
             style: Theme.of(context)
                 .textTheme
                 .titleMedium
                 ?.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text('DesktopNotifier — one API for Windows, macOS, and Linux.',
+            style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 14),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final cols = (constraints.maxWidth / 300).floor().clamp(1, 4);
-            final cellWidth = (constraints.maxWidth - (cols - 1) * 14) / cols;
-            return Wrap(
-              spacing: 14,
-              runSpacing: 14,
-              children: [
-                _ActionButton(
-                  width: cellWidth,
-                  icon: Icons.notifications_active_outlined,
-                  label: 'Simple',
-                  description: 'Title and body, nothing else',
-                  onTap: _simpleToast,
-                ),
-                _ActionButton(
-                  width: cellWidth,
-                  icon: Icons.reply_outlined,
-                  label: 'Reply input',
-                  description: 'Text box plus two buttons',
-                  onTap: _replyToast,
-                ),
-                _ActionButton(
-                  width: cellWidth,
-                  icon: Icons.open_in_browser_outlined,
-                  label: 'Open link',
-                  description: 'Protocol-launch to the browser',
-                  onTap: _linkToast,
-                ),
-                _ActionButton(
-                  width: cellWidth,
-                  icon: Icons.schedule_outlined,
-                  label: 'Reminder',
-                  description: 'Persistent · adds a snooze menu',
-                  onTap: _reminderToast,
-                ),
-                _ActionButton(
-                  width: cellWidth,
-                  icon: Icons.alarm_outlined,
-                  label: 'Alarm',
-                  description: 'Loops until acted on · long',
-                  onTap: _alarmToast,
-                ),
-                _ActionButton(
-                  width: cellWidth,
-                  icon: Icons.priority_high_rounded,
-                  label: 'Urgent',
-                  description: 'Bypasses Focus Assist',
-                  onTap: _urgentToast,
-                ),
-                _ActionButton(
-                  width: cellWidth,
-                  icon: Icons.notifications_off_outlined,
-                  label: 'Silent',
-                  description: 'No sound · attribution line',
-                  onTap: _silentToast,
-                ),
-                _ActionButton(
-                  width: cellWidth,
-                  icon: Icons.downloading_outlined,
-                  label: 'Progress bar',
-                  description: 'Value, override label, status',
-                  onTap: _progressToast,
-                ),
-                _ActionButton(
-                  width: cellWidth,
-                  icon: Icons.code_outlined,
-                  label: 'Custom XML',
-                  description: 'Hand-written toast XML',
-                  onTap: _customXmlToast,
-                ),
-                _ActionButton(
-                  width: constraints.maxWidth,
-                  icon: Icons.image_outlined,
-                  label: 'Hero image from a widget',
-                  description:
-                      'Rasterizes a Flutter widget with WidgetToImage and '
-                      'drops it into the toast',
-                  primary: true,
-                  onTap: _heroToast,
-                ),
-              ],
-            );
-          },
-        ),
+        _crossPlatformButtons(cs),
+        if (Platform.isWindows) ...[
+          const SizedBox(height: 26),
+          Text('Windows extras',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text(
+            'WindowsNotification — scenarios, audio, progress, custom XML, '
+            'and hero images.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cols = (constraints.maxWidth / 300).floor().clamp(1, 4);
+              final cellWidth = (constraints.maxWidth - (cols - 1) * 14) / cols;
+              return Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: [
+                  _ActionButton(
+                    width: cellWidth,
+                    icon: Icons.notifications_active_outlined,
+                    label: 'Simple',
+                    description: 'Title and body, nothing else',
+                    onTap: _simpleToast,
+                  ),
+                  _ActionButton(
+                    width: cellWidth,
+                    icon: Icons.reply_outlined,
+                    label: 'Reply input',
+                    description: 'Text box plus two buttons',
+                    onTap: _replyToast,
+                  ),
+                  _ActionButton(
+                    width: cellWidth,
+                    icon: Icons.open_in_browser_outlined,
+                    label: 'Open link',
+                    description: 'Protocol-launch to the browser',
+                    onTap: _linkToast,
+                  ),
+                  _ActionButton(
+                    width: cellWidth,
+                    icon: Icons.schedule_outlined,
+                    label: 'Reminder',
+                    description: 'Persistent · adds a snooze menu',
+                    onTap: _reminderToast,
+                  ),
+                  _ActionButton(
+                    width: cellWidth,
+                    icon: Icons.alarm_outlined,
+                    label: 'Alarm',
+                    description: 'Loops until acted on · long',
+                    onTap: _alarmToast,
+                  ),
+                  _ActionButton(
+                    width: cellWidth,
+                    icon: Icons.priority_high_rounded,
+                    label: 'Urgent',
+                    description: 'Bypasses Focus Assist',
+                    onTap: _urgentToast,
+                  ),
+                  _ActionButton(
+                    width: cellWidth,
+                    icon: Icons.notifications_off_outlined,
+                    label: 'Silent',
+                    description: 'No sound · attribution line',
+                    onTap: _silentToast,
+                  ),
+                  _ActionButton(
+                    width: cellWidth,
+                    icon: Icons.downloading_outlined,
+                    label: 'Progress bar',
+                    description: 'Value, override label, status',
+                    onTap: _progressToast,
+                  ),
+                  _ActionButton(
+                    width: cellWidth,
+                    icon: Icons.code_outlined,
+                    label: 'Custom XML',
+                    description: 'Hand-written toast XML',
+                    onTap: _customXmlToast,
+                  ),
+                  _ActionButton(
+                    width: constraints.maxWidth,
+                    icon: Icons.image_outlined,
+                    label: 'Hero image from a widget',
+                    description:
+                        'Rasterizes a Flutter widget with WidgetToImage and '
+                        'drops it into the toast',
+                    primary: true,
+                    onTap: _heroToast,
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _crossPlatformButtons(ColorScheme cs) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cols = (constraints.maxWidth / 300).floor().clamp(1, 4);
+        final cellWidth = (constraints.maxWidth - (cols - 1) * 14) / cols;
+        return Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: [
+            _ActionButton(
+              width: cellWidth,
+              icon: Icons.notifications_active_outlined,
+              label: 'Simple',
+              description: 'Title and body',
+              onTap: _xSimple,
+            ),
+            _ActionButton(
+              width: cellWidth,
+              icon: Icons.smart_button_outlined,
+              label: 'With buttons',
+              description: 'Two action buttons',
+              onTap: _xButtons,
+            ),
+            _ActionButton(
+              width: cellWidth,
+              icon: Icons.reply_outlined,
+              label: 'With reply',
+              description: 'Reply field (Windows, macOS)',
+              onTap: _xReply,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -609,27 +724,28 @@ class _HomePageState extends State<HomePage> {
       runSpacing: 12,
       children: [
         OutlinedButton.icon(
-          onPressed: _clearHistory,
+          onPressed: _xCancelAll,
           icon: const Icon(Icons.layers_clear_outlined, size: 18),
-          label: const Text('Clear history'),
+          label: const Text('Clear all'),
         ),
-        OutlinedButton.icon(
-          onPressed: _removeGroup,
-          icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-          label: const Text('Remove "demos" group'),
-        ),
+        if (Platform.isWindows)
+          OutlinedButton.icon(
+            onPressed: _removeGroup,
+            icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+            label: const Text('Remove "demos" group'),
+          ),
       ],
     );
   }
 
   Widget _helpCard(ColorScheme cs) {
     const tips = [
-      'Click a toast — its body tap, buttons, and dismissal show up below',
-      'Type in the Reply box, then click Reply to read the text back',
-      'Open the Action Center (Win + N) to see delivered toasts',
-      'Alarm and Urgent use different sounds and bypass Focus Assist',
-      'Hero image renders a live Flutter widget into the toast',
-      'Recolor everything from the accent swatches — the hero image follows',
+      'The top row uses DesktopNotifier — it runs on Windows, macOS, and Linux',
+      'Click a notification or its buttons — the event shows up below',
+      'Type in the reply field, then send, to read the text back',
+      'Windows extras add scenarios, audio, progress bars, and custom XML',
+      'Hero image renders a live Flutter widget into a Windows toast',
+      'Recolor everything from the accent swatches above',
     ];
     return Container(
       padding: const EdgeInsets.all(20),

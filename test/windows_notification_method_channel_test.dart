@@ -97,8 +97,8 @@ void main() {
         attribution: 'Source',
         scenario: NotificationScenario.urgent,
         duration: NotificationDuration.long,
-        audio: const NotificationAudio(
-            sound: NotificationSound.Alarm, loop: true),
+        audio:
+            const NotificationAudio(sound: NotificationSound.Alarm, loop: true),
         progress: const NotificationProgress(
           title: 'Upload',
           value: 0.5,
@@ -173,9 +173,8 @@ void main() {
       await platform.setCallback((d) => received = d);
 
       final payloadJson = json.encode(NotificationMessage.fromPluginTemplate(
-              'id-4', 'T', 'B',
-              payload: const {'hello': 'world'})
-          .toPayloadMap());
+          'id-4', 'T', 'B',
+          payload: const {'hello': 'world'}).toPayloadMap());
 
       final codec = platform.methodChannel.codec;
       final envelope = codec.encodeMethodCall(MethodCall('activated', {
@@ -183,8 +182,7 @@ void main() {
         'arguments': 'clicked',
         'user_input': {'reply': 'thanks'},
       }));
-      await TestDefaultBinaryMessengerBinding
-          .instance.defaultBinaryMessenger
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .handlePlatformMessage('windows_notification', envelope, (_) {});
 
       expect(received, isNotNull);

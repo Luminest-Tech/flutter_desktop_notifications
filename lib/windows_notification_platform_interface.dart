@@ -28,17 +28,16 @@ abstract class WindowsNotificationPlatform extends PlatformInterface {
   }) =>
       throw UnimplementedError('registerAumid() has not been implemented.');
 
-  Future<void> bringAppToForeground() =>
-      throw UnimplementedError(
-          'bringAppToForeground() has not been implemented.');
+  Future<void> bringAppToForeground() => throw UnimplementedError(
+      'bringAppToForeground() has not been implemented.');
 
   Future<void> showPluginTemplate(
           NotificationMessage message, String? applicationId) =>
       throw UnimplementedError(
           'showPluginTemplate() has not been implemented.');
 
-  Future<void> showCustomTemplate(
-          NotificationMessage message, String? applicationId, String template) =>
+  Future<void> showCustomTemplate(NotificationMessage message,
+          String? applicationId, String template) =>
       throw UnimplementedError(
           'showCustomTemplate() has not been implemented.');
 
@@ -51,7 +50,8 @@ abstract class WindowsNotificationPlatform extends PlatformInterface {
 
   Future<void> removeNotification(
           String id, String group, String? applicationId) =>
-      throw UnimplementedError('removeNotification() has not been implemented.');
+      throw UnimplementedError(
+          'removeNotification() has not been implemented.');
 
   Future<void> removeNotificationGroup(String group, String? applicationId) =>
       throw UnimplementedError(
