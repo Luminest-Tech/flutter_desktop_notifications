@@ -3,10 +3,10 @@
 [![pub](https://img.shields.io/pub/v/flutter_desktop_notifications?logo=dart&label=pub&color=0175C2)](https://pub.dev/packages/flutter_desktop_notifications)
 [![points](https://img.shields.io/pub/points/flutter_desktop_notifications?color=0175C2)](https://pub.dev/packages/flutter_desktop_notifications/score)
 [![likes](https://img.shields.io/pub/likes/flutter_desktop_notifications?color=0175C2)](https://pub.dev/packages/flutter_desktop_notifications/score)
-[![stars](https://img.shields.io/github/stars/Luminest-Tech/flutter_desktop_notifications?logo=github&label=stars&color=24292e)](https://github.com/Luminest-Tech/flutter_desktop_notifications/stargazers)
-[![CI](https://github.com/Luminest-Tech/flutter_desktop_notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/Luminest-Tech/flutter_desktop_notifications/actions/workflows/ci.yml)
+[![stars](https://img.shields.io/github/stars/Luminest-Tech/Flutter-Desktop-Notifications?logo=github&label=stars&color=24292e)](https://github.com/Luminest-Tech/Flutter-Desktop-Notifications/stargazers)
+[![CI](https://github.com/Luminest-Tech/Flutter-Desktop-Notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/Luminest-Tech/Flutter-Desktop-Notifications/actions/workflows/ci.yml)
 [![platform](https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-3b82f6)](https://pub.dev/packages/flutter_desktop_notifications)
-[![license](https://img.shields.io/badge/license-MIT-7c4dff)](https://github.com/Luminest-Tech/flutter_desktop_notifications/blob/main/LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-7c4dff)](https://github.com/Luminest-Tech/Flutter-Desktop-Notifications/blob/main/LICENSE)
 
 Native desktop notifications for Flutter on **Windows, macOS, and Linux**, behind
 one small API. Show a notification with a title, body, image, action buttons, and
@@ -23,7 +23,7 @@ later.
 
 | | | |
 |---|---|---|
-| ![Hero image from a Flutter widget](https://raw.githubusercontent.com/Luminest-Tech/flutter_desktop_notifications/main/screenshots/toast-hero.png) | ![Inline reply box](https://raw.githubusercontent.com/Luminest-Tech/flutter_desktop_notifications/main/screenshots/toast-reply.png) | ![Progress bar](https://raw.githubusercontent.com/Luminest-Tech/flutter_desktop_notifications/main/screenshots/toast-progress.png) |
+| ![Hero image from a Flutter widget](https://raw.githubusercontent.com/Luminest-Tech/Flutter-Desktop-Notifications/main/screenshots/toast-hero.png) | ![Inline reply box](https://raw.githubusercontent.com/Luminest-Tech/Flutter-Desktop-Notifications/main/screenshots/toast-reply.png) | ![Progress bar](https://raw.githubusercontent.com/Luminest-Tech/Flutter-Desktop-Notifications/main/screenshots/toast-progress.png) |
 
 ## Install
 

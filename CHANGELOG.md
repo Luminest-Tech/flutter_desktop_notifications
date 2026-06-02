@@ -1,3 +1,10 @@
+## 1.1.2
+
+Metadata only. No code changes.
+
+- Point the repository and README URLs at the renamed GitHub repo,
+  `Flutter-Desktop-Notifications`, so pub.dev can verify the repository.
+
 ## 1.1.1
 
 Documentation only. No code changes.

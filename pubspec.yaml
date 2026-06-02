@@ -1,9 +1,9 @@
 name: flutter_desktop_notifications
 description: "Native desktop notifications for Flutter on Windows, macOS, and Linux. One unified API for title, body, images, buttons, replies, and click/dismiss callbacks."
-version: 1.1.1
+version: 1.1.2
 homepage: https://luminest.io/pages/docs-windows-notifications
-repository: https://github.com/Luminest-Tech/flutter_desktop_notifications
-issue_tracker: https://github.com/Luminest-Tech/flutter_desktop_notifications/issues
+repository: https://github.com/Luminest-Tech/Flutter-Desktop-Notifications
+issue_tracker: https://github.com/Luminest-Tech/Flutter-Desktop-Notifications/issues
 
 topics:
   - notifications
