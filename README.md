@@ -1,15 +1,25 @@
 # flutter_desktop_notifications
 
+[![pub](https://img.shields.io/pub/v/flutter_desktop_notifications?logo=dart&label=pub&color=0175C2)](https://pub.dev/packages/flutter_desktop_notifications)
+[![points](https://img.shields.io/pub/points/flutter_desktop_notifications?color=0175C2)](https://pub.dev/packages/flutter_desktop_notifications/score)
+[![likes](https://img.shields.io/pub/likes/flutter_desktop_notifications?color=0175C2)](https://pub.dev/packages/flutter_desktop_notifications/score)
+[![stars](https://img.shields.io/github/stars/Luminest-Tech/flutter_desktop_notifications?logo=github&label=stars&color=24292e)](https://github.com/Luminest-Tech/flutter_desktop_notifications/stargazers)
+[![CI](https://github.com/Luminest-Tech/flutter_desktop_notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/Luminest-Tech/flutter_desktop_notifications/actions/workflows/ci.yml)
+[![platform](https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-3b82f6)](https://pub.dev/packages/flutter_desktop_notifications)
+[![license](https://img.shields.io/badge/license-MIT-7c4dff)](https://github.com/Luminest-Tech/flutter_desktop_notifications/blob/main/LICENSE)
+
 Native desktop notifications for Flutter on **Windows, macOS, and Linux**, behind
 one small API. Show a notification with a title, body, image, action buttons, and
-a reply field, and get a callback when the user clicks or dismisses it. On Windows
-you can also reach the full toast feature set (scenarios, sounds, progress bars,
-custom XML, and a hero image rendered from a Flutter widget).
+a reply field, then get a callback when the user clicks or dismisses it. On Windows
+you also get the full toast feature set: scenarios, sounds, progress bars, custom
+XML, and a hero image rendered from a Flutter widget.
 
-This started as a fork and rewrite of
+**pub.dev:** https://pub.dev/packages/flutter_desktop_notifications
+
+This package started as a fork and rewrite of
 [`windows_notification`](https://pub.dev/packages/windows_notification) by
-mrtnetwork; the Windows toast engine grew from there and the macOS and Linux
-backends were added on top.
+mrtnetwork. The Windows toast engine grew from there, and macOS and Linux came
+later.
 
 | | | |
 |---|---|---|
