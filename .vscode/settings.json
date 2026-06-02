@@ -73,5 +73,6 @@
         "xloctime": "cpp",
         "xtree": "cpp",
         "codecvt": "cpp"
-    }
+    },
+    "cmake.ignoreCMakeListsMissing": true
 }
