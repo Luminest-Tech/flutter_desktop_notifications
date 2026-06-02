@@ -1,7 +1,8 @@
 ## 1.0.0
 
-First release of `flutter_windows_notification`, a fork and rewrite of
-`windows_notification` by mrtnetwork.
+First release of `flutter_desktop_notifications`, a fork and rewrite of
+`windows_notification` by mrtnetwork. Ships a Windows implementation today;
+macOS and Linux are planned.
 
 - Structured `NotificationMessage.fromPluginTemplate` with title, body, a small
   circle-cropped logo, a large image, and a hero image.

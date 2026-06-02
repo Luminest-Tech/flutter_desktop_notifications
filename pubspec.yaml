@@ -1,13 +1,38 @@
-name: flutter_windows_notification
-description: "Send native Windows toast notifications from Flutter, with structured support for actions, inputs, and activation/dismissal callbacks."
+name: flutter_desktop_notifications
+description: "Native desktop notifications for Flutter. Windows toasts today, with actions, inputs, rich content, and activation callbacks. macOS and Linux planned."
 version: 1.0.0
+homepage: https://luminest.io/pages/docs-windows-notifications
+repository: https://github.com/Luminest-Tech/flutter_desktop_notifications
+issue_tracker: https://github.com/Luminest-Tech/flutter_desktop_notifications/issues
 
 topics:
-  - windows
   - notifications
   - toast
   - desktop
+  - windows
   - winrt
+
+screenshots:
+  - description: "A toast whose hero image is a live Flutter widget, rendered with WidgetToImage."
+    path: screenshots/toast-hero.png
+  - description: "An inline reply box with Reply and Dismiss action buttons."
+    path: screenshots/toast-reply.png
+  - description: "A determinate progress bar with a status line."
+    path: screenshots/toast-progress.png
+  - description: "A simple title and body toast."
+    path: screenshots/toast-simple.png
+  - description: "A reminder scenario with an attribution line."
+    path: screenshots/toast-reminder.png
+  - description: "An alarm scenario with Snooze and Dismiss buttons."
+    path: screenshots/toast-alarm.png
+  - description: "An urgent toast that bypasses Focus Assist."
+    path: screenshots/toast-urgent.png
+  - description: "A silent toast with an attribution line."
+    path: screenshots/toast-silent.png
+  - description: "A toast that protocol-launches a URL when its body is tapped."
+    path: screenshots/toast-link.png
+  - description: "A meeting reminder built from hand-written toast XML with a snooze selector."
+    path: screenshots/toast-custom-xml.png
 
 environment:
   sdk: ^3.3.0

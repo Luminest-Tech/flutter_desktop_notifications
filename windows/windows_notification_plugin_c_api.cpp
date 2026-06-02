@@ -1,4 +1,4 @@
-#include "include/flutter_windows_notification/windows_notification_plugin_c_api.h"
+#include "include/flutter_desktop_notifications/windows_notification_plugin_c_api.h"
 
 #include <flutter/plugin_registrar_windows.h>
 

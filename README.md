@@ -1,18 +1,25 @@
-# flutter_windows_notification
+# flutter_desktop_notifications
 
-Send native Windows toast notifications from Flutter. Build a toast from a
-structured template or ship raw toast XML, attach buttons and reply boxes, get
-callbacks when the user clicks or dismisses, and pull notifications back out of
-the Action Center.
+Native desktop notifications for Flutter. Build a notification from a structured
+template or ship raw markup, attach buttons and reply boxes, get callbacks when
+the user clicks or dismisses, and pull notifications back out of the system tray.
 
-Windows only. Pair it with `flutter_local_notifications` if you also need
-Android or iOS.
+Today this ships a **Windows** implementation built on the WinRT toast APIs.
+macOS and Linux are planned, so the package is named for where it is going. If
+you only need Windows right now, it is ready.
 
-This is a fork and rewrite of
+This started as a fork and rewrite of
 [`windows_notification`](https://pub.dev/packages/windows_notification) by
 mrtnetwork. The public API was reworked, the native side hardened, and a few
 features added (rich content, a widget-to-image hero renderer, and a Start Menu
 AUMID helper for unpackaged apps).
+
+| | | |
+|---|---|---|
+| ![Hero image from a Flutter widget](https://raw.githubusercontent.com/Luminest-Tech/flutter_desktop_notifications/main/screenshots/toast-hero.png) | ![Inline reply box](https://raw.githubusercontent.com/Luminest-Tech/flutter_desktop_notifications/main/screenshots/toast-reply.png) | ![Progress bar](https://raw.githubusercontent.com/Luminest-Tech/flutter_desktop_notifications/main/screenshots/toast-progress.png) |
+
+The `example/` app fires every one of these. More shots are in the pub.dev
+gallery.
 
 ## What you can send
 
@@ -25,23 +32,23 @@ AUMID helper for unpackaged apps).
 - Fully custom toast XML when the built-ins do not cover something.
 - Activation and dismissal callbacks carrying the original message, the action
   arguments, and any typed input.
-- Removal of delivered toasts by id, by group, or all at once.
+- Removal of delivered notifications by id, by group, or all at once.
 
 ## Install
 
 ```yaml
 dependencies:
-  flutter_windows_notification: ^1.0.0
+  flutter_desktop_notifications: ^1.0.0
 ```
 
 ```dart
-import 'package:flutter_windows_notification/flutter_windows_notification.dart';
+import 'package:flutter_desktop_notifications/flutter_desktop_notifications.dart';
 ```
 
 ## Registering an Application User Model ID (AUMID)
 
-Windows will not show a toast whose AUMID is not registered. The AUMID is also
-what the OS uses to look up the sender's name and icon.
+On Windows, the OS will not show a toast whose AUMID is not registered. The
+AUMID is also what it uses to look up the sender's name and icon.
 
 - **Packaged (MSIX) apps**: the manifest supplies the AUMID. Leave
   `applicationId` null.
@@ -172,8 +179,8 @@ when `launch` is a URL you want Windows to open on a body tap.
 ## Hero image from a Flutter widget
 
 `WidgetToImage` renders any widget off-screen to a PNG, so you can put
-live-generated content in a toast without mounting the widget first. Toast hero
-images are 364 x 180; pass a higher `pixelRatio` for crisp output.
+live-generated content in a notification without mounting the widget first.
+Toast hero images are 364 x 180; pass a higher `pixelRatio` for crisp output.
 
 ```dart
 final path = await WidgetToImage.toPngFile(
@@ -235,10 +242,19 @@ await notifier.removeNotificationGroup('meetings');     // all in a group
 await notifier.removeNotificationId('meeting-1983', 'meetings'); // a single toast
 ```
 
+## Platform support
+
+| Platform | Status |
+|----------|--------|
+| Windows  | Supported (WinRT toast notifications) |
+| macOS    | Planned |
+| Linux    | Planned |
+
 ## Example
 
 A full demo lives in `example/`. It has an accent and light/dark switcher and a
-button for every kind of toast, including the widget-to-hero-image renderer.
+button for every kind of notification, including the widget-to-hero-image
+renderer.
 
 ```bash
 cd example

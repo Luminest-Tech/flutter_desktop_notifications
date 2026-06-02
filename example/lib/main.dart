@@ -1,9 +1,9 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_windows_notification/flutter_windows_notification.dart';
+import 'package:flutter_desktop_notifications/flutter_desktop_notifications.dart';
 
-const _aumid = 'io.luminest.flutter_windows_notification.example';
+const _aumid = 'io.luminest.flutter_desktop_notifications.example';
 const _displayName = 'Windows Notification Demo';
 const _heroSize = Size(364, 180);
 
@@ -50,7 +50,7 @@ class _ExampleAppState extends State<ExampleApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'flutter_windows_notification demo',
+      title: 'flutter_desktop_notifications demo',
       theme: _theme(Brightness.light),
       darkTheme: _theme(Brightness.dark),
       themeMode: _mode,
@@ -423,7 +423,7 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'flutter_windows_notification',
+                'flutter_desktop_notifications',
                 style: Theme.of(context)
                     .textTheme
                     .headlineSmall

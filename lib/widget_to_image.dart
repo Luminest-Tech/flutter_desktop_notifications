@@ -127,7 +127,7 @@ class WidgetToImage {
 
   static String _defaultPngPath() {
     final dir =
-        Directory('${Directory.systemTemp.path}/flutter_windows_notification');
+        Directory('${Directory.systemTemp.path}/flutter_desktop_notifications');
     final name = 'hero_${DateTime.now().microsecondsSinceEpoch}.png';
     return '${dir.path}/$name';
   }

@@ -5,13 +5,13 @@
 cmake_minimum_required(VERSION 3.14)
 
 # Project-level configuration.
-set(PROJECT_NAME "flutter_windows_notification")
+set(PROJECT_NAME "flutter_desktop_notifications")
 project(${PROJECT_NAME} LANGUAGES CXX)
 
 # This value is used when generating builds using this plugin, so it must
 # not be changed. It has to match "<package name>_plugin" so the Flutter
 # tool's generated plugin registrant can find the build target.
-set(PLUGIN_NAME "flutter_windows_notification_plugin")
+set(PLUGIN_NAME "flutter_desktop_notifications_plugin")
 
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
@@ -22,7 +22,7 @@ list(APPEND PLUGIN_SOURCES
 # Define the plugin library target. Its name must not be changed (see comment
 # on PLUGIN_NAME above).
 add_library(${PLUGIN_NAME} SHARED
-  "include/flutter_windows_notification/windows_notification_plugin_c_api.h"
+  "include/flutter_desktop_notifications/windows_notification_plugin_c_api.h"
   "windows_notification_plugin_c_api.cpp"
   ${PLUGIN_SOURCES}
 )
@@ -50,7 +50,7 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE propsys shell32 ole32 shlwapi)
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an
 # external build triggered from this build file.
-set(flutter_windows_notification_bundled_libraries
+set(flutter_desktop_notifications_bundled_libraries
   ""
   PARENT_SCOPE
 )

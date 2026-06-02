@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:flutter_windows_notification/flutter_windows_notification.dart';
-import 'package:flutter_windows_notification/windows_notification_method_channel.dart';
-import 'package:flutter_windows_notification/windows_notification_platform_interface.dart';
+import 'package:flutter_desktop_notifications/flutter_desktop_notifications.dart';
+import 'package:flutter_desktop_notifications/windows_notification_method_channel.dart';
+import 'package:flutter_desktop_notifications/windows_notification_platform_interface.dart';
 
 class _RecordingPlatform
     with MockPlatformInterfaceMixin

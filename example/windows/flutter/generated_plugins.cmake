@@ -3,7 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  flutter_windows_notification
+  flutter_desktop_notifications
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
