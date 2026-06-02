@@ -1,3 +1,10 @@
+## 1.1.1
+
+Documentation only. No code changes.
+
+- Add status badges (pub, stars, CI, platform, license) and the pub.dev link to
+  the README.
+
 ## 1.1.0
 
 Cross-platform release. macOS and Linux now have working backends.
